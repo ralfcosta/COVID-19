@@ -1,7 +1,7 @@
 include ./help.mk
+.PHONY: launch data-launch collect README.md image covid-19 test
 
-image_repo=3778
-image=$(image_repo)/covid-19:latest
+image := 3778/covid-19
 
 launch:
 	streamlit run app.py
@@ -18,23 +18,24 @@ bin/gh-md-toc:
 	chmod a+x gh-md-toc
 	mv gh-md-toc bin/
 
-.PHONY: README.md
 README.md: bin/gh-md-toc
 	./bin/gh-md-toc --insert README.md
 	rm -f README.md.orig.* README.md.toc.*
 
-.PHONY: covid-19
+image: ## Build covid-19 image
+	docker build . --tag $(image)
+
 covid-19: ## Run covid-19 container
 	docker run \
 		--rm \
 		--publish 8501:8501 \
 		--name covid-19 \
-		--volume $(shell pwd):/covid-19 \
-		$(image)
-
-.PHONY: image
-image: ## Build covid-19 image
-	docker build . --tag $(image)
+		--volume $(CURDIR):/covid-19 \
+		$(image) tail -f /dev/null
 
 test:
+ifneq "$(shell which pytest)" ""
 	pytest --doctest-modules --verbose covid19/
+else
+	docker run --rm $(image) pytest --doctest-modules --verbose covid19/
+endif
