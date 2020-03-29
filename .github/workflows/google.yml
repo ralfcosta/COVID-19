@@ -47,8 +47,8 @@ jobs:
         # Set up docker to authenticate
         # via gcloud command-line tool.
         gcloud auth configure-docker
-        gcloud auth activate-service-account secrets.GKE_EMAIL
-        gcloud config set account secrets.GKE_EMAIL
+        gcloud auth activate-service-account GKE_EMAIL
+        gcloud config set account GKE_EMAIL
       
     # Build the Docker image
     - name: Build
