@@ -1,0 +1,12 @@
+kind: Service
+apiVersion: v1
+metadata:
+  name: covid-19
+spec:
+  selector:
+     run: covid-19
+  ports:
+  - protocol: TCP
+    port: 80
+    targetPort: 8501
+  type: LoadBalancer

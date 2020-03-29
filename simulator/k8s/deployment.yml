@@ -1,0 +1,21 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    run: covid-19
+  name: covid-19
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      run: covid-19
+  template:
+    metadata:
+      labels:
+        run: covid-19
+    spec:
+      containers:
+      - image: gcr.io/<google-project-id>/covid-19:latest
+        name: covid-19
+        ports:
+        - containerPort: <container-port>

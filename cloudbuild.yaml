@@ -1,0 +1,54 @@
+# Environment variables available to all jobs and steps in this workflow
+steps:
+- name: Set variables
+  env:
+  - PROJECT_ID: covid-queue-simulator
+  - GKE_EMAIL: andre.eddie@gmail.com
+  - #GITHUB_SHA: ${{ github.sha }}
+  - TAG: 0
+  - GKE_ZONE: us-east1
+  - GKE_CLUSTER: hospital-queue-cluster
+  - IMAGE: covid-19
+  - REGISTRY_HOSTNAME: gcr.io
+  - DEPLOYMENT_NAME: hospital-queue
+
+#step 1
+- name: 'gcr.io/cloud-builders/docker' 
+  entrypoint: 'bash'
+  args: [
+   '-c', 
+   'docker pull gcr.io/$PROJECT_ID/covid-19:latest || exit 0'
+  ]
+#step 2
+- name: gcr.io/cloud-builders/docker
+  args: [
+   'build', 
+   '-t', 
+   'gcr.io/$PROJECT_ID/covid-19:$BRANCH_NAME-$COMMIT_SHA',
+   '-t', 
+   'gcr.io/$PROJECT_ID/covid-19:latest',
+   '.'
+  ]
+#step 3
+- name: 'gcr.io/cloud-builders/kubectl'
+  args: ['apply', '-f', 'k8s/']
+  env:
+  - 'CLOUDSDK_COMPUTE_ZONE=GKE_ZONE'
+  - 'CLOUDSDK_CONTAINER_CLUSTER=<GKE_CLUSTER'
+#step 4
+- name: 'gcr.io/cloud-builders/kubectl'
+  args: [
+   'set', 
+   'image', 
+   'deployment', 
+   'covid-19', 
+   'covid-19=gcr.io/$PROJECT_ID/covid-19:$BRANCH_NAME-$COMMIT_SHA'
+  ]
+  env:
+  - 'CLOUDSDK_COMPUTE_ZONE=GKE_ZONE'
+  - 'CLOUDSDK_CONTAINER_CLUSTER=<GKE_CLUSTER'
+# push images to Google Container Registry with tags
+images: [
+   'gcr.io/$PROJECT_ID/covid-19:$BRANCH_NAME-$COMMIT_SHA',
+   'gcr.io/$PROJECT_ID/covid-19:latest'
+  ]
