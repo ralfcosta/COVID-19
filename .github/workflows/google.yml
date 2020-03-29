@@ -46,6 +46,7 @@ jobs:
     - run: |
         # Set up docker to authenticate
         # via gcloud command-line tool.
+        gcloud config set account ${{ secrets.GKE_EMAIL }}
         gcloud auth configure-docker
       
     # Build the Docker image
