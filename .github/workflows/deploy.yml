@@ -5,13 +5,6 @@ on:
     branches:
       - git-actions
 
-# Environment variables available to all jobs and steps in this workflow
-env:
-  HEROKU_API_KEY: ${{ secrets.HEROKU_API_KEY}}
-  HEROKU_EMAIL: ${{ secrets.HEROKU_EMAIL }}
-  APP_NAME: hospital-queue-model
-  BRANCH: develop
-
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -19,10 +12,10 @@ jobs:
       - uses: actions/checkout@v2
       - uses: akhileshns/heroku-deploy@v3.0.0 # This is the action
         with:
-          heroku_api_key: HEROKU_API_KEY
-          heroku_app_name: APP_NAME #Must be unique in Heroku
-          heroku_email: HEROKU_EMAIL
+          heroku_api_key: ${{ secrets.HEROKU_API_KEY}}
+          heroku_app_name: hospital-queue-model #Must be unique in Heroku
+          heroku_email: ${{ secrets.HEROKU_EMAIL }}
           #buildpack: "SOME BUILDPACK" #OPTIONAL
-          branch: BRANCH #OPTIONAL and DEFAULT - 'HEAD' (a.k.a your current branch)
+          branch: develop #OPTIONAL and DEFAULT - 'HEAD' (a.k.a your current branch)
           dontuseforce: false #OPTIONAL and DEFAULT - false
           usedocker: true #OPTIONAL and DEFAULT - false
