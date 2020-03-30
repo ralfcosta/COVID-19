@@ -23,19 +23,17 @@ env:
   BRANCH: develop
 
 jobs:
-  setup-build-publish-deploy:
-    name: Setup, Build, Publish, and Deploy
+  build:
     runs-on: ubuntu-latest
     steps:
-
-    - name: Deploy to Heroku
-    - uses: actions/checkout@v2
-    - uses: akhileshns/heroku-deploy@v3.0.0 # This is the action
-      with:
-        heroku_api_key: HEROKU_API_KEY
-        heroku_app_name: APP_NAME #Must be unique in Heroku
-        heroku_email: HEROKU_EMAIL
-        #buildpack: "SOME BUILDPACK" #OPTIONAL
-        branch: BRANCH #OPTIONAL and DEFAULT - 'HEAD' (a.k.a your current branch)
-        dontuseforce: false #OPTIONAL and DEFAULT - false
-        usedocker: true #OPTIONAL and DEFAULT - false
+      - name: Deploy to Heroku
+      - uses: actions/checkout@v2
+      - uses: akhileshns/heroku-deploy@v3.0.0 # This is the action
+        with:
+          heroku_api_key: HEROKU_API_KEY
+          heroku_app_name: APP_NAME #Must be unique in Heroku
+          heroku_email: HEROKU_EMAIL
+          #buildpack: "SOME BUILDPACK" #OPTIONAL
+          branch: BRANCH #OPTIONAL and DEFAULT - 'HEAD' (a.k.a your current branch)
+          dontuseforce: false #OPTIONAL and DEFAULT - false
+          usedocker: true #OPTIONAL and DEFAULT - false
