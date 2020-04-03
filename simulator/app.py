@@ -32,6 +32,7 @@ DEFAULT_PARAMS = {
     'length_of_stay_covid_uti': 8,
     'icu_rate': .1,
     'icu_rate_after_bed': .08,
+    'icu_rate_after_bed': .1,
 
     'total_beds': 12222,
     'total_beds_icu': 2421,
@@ -302,7 +303,22 @@ def run_queue_model(dataset, params_simulation):
 
         return simulation_output
 
-def calculate_input_hospital_queue(model_output, place, date):
+def calculate_input_hospital_queue(model_output, cases_df, place, date):
+
+    df = (cases_df
+            .assign(cases=lambda df: df.I.fillna(df.I))
+            .assign(newly_infected=lambda df: df.cases - df.cases.shift(1) + df.R - df.R.shift(1))
+            .assign(newly_R=lambda df: df.R.diff())
+            .rename(columns={'cases': 'totalCases OR I'})) 
+
+    previousCases = (
+        cases_df
+        [place]
+        ['newCases']
+        [:date]
+    )
+
+    previousCases = previousCases['newCases']
 
     S, E, I, R, t = model_output
 
@@ -321,6 +337,9 @@ def calculate_input_hospital_queue(model_output, place, date):
 
     df = df[pd.notna(df.newly_infected)]
     df = df.reset_index().rename(columns={'index':'day'})
+    df = df['newly_infected']
+
+    df = pd.concat(previousCases,df)
 
     return df
 
@@ -471,7 +490,7 @@ if __name__ == '__main__':
         st.markdown(texts.HOSPITAL_QUEUE_SIMULATION)
 
         params_simulation = make_param_widgets_hospital_queue(w_place)
-        dataset = calculate_input_hospital_queue(model_output ,w_place, w_date)
+        dataset = calculate_input_hospital_queue(model_output , cases_df,w_place, w_date)
 
         dataset = dataset[['day', 'newly_infected']].copy()
         dataset = dataset.assign(hospitalizados=round(dataset['newly_infected']*0.14))
