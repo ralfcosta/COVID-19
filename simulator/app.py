@@ -32,7 +32,7 @@ DEFAULT_PARAMS = {
     'length_of_stay_covid_uti': 8,
     'icu_rate': .1,
     'icu_rate_after_bed': .08,
-    'icu_rate_after_bed': .1,
+    'icu_death_rate': .1,
 
     'total_beds': 12222,
     'total_beds_icu': 2421,
