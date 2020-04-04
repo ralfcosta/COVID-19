@@ -318,7 +318,14 @@ def calculate_input_hospital_queue(model_output, cases_df, place, date):
         [:date]
     )
 
+    init = previousCases.index[0]
+    final = previousCases.index[previousCases.shape[0]-1]
+    idx = pd.date_range(init, final)
+    previousCases.index = pd.DatetimeIndex(previousCases.index)
+    previousCases = previousCases.reindex(idx, fill_value=0)
+    previousCases = previousCases.reset_index()
     previousCases = previousCases['newCases']
+    cut_after = previousCases.shape[0]
 
     S, E, I, R, t = model_output
 
@@ -340,8 +347,9 @@ def calculate_input_hospital_queue(model_output, cases_df, place, date):
     df = df['newly_infected']
 
     df = pd.concat(previousCases,df)
+    df = df.reset_index()
 
-    return df
+    return df, cut_after
 
 def estimate_r0(cases_df, place, sample_size, min_days, w_date):
     used_brazil = False
@@ -490,12 +498,13 @@ if __name__ == '__main__':
         st.markdown(texts.HOSPITAL_QUEUE_SIMULATION)
 
         params_simulation = make_param_widgets_hospital_queue(w_place)
-        dataset = calculate_input_hospital_queue(model_output , cases_df,w_place, w_date)
+        dataset,cut_after = calculate_input_hospital_queue(model_output , cases_df,w_place, w_date)
 
         dataset = dataset[['day', 'newly_infected']].copy()
         dataset = dataset.assign(hospitalizados=round(dataset['newly_infected']*0.14))
 
         simulation_output = run_queue_model(dataset, params_simulation)
+        simulation_output.drop(simulation_output.index[:cut_after])
         simulation_output = simulation_output.join(dataset, how='inner')
             
         simulation_output = simulation_output.assign(is_breakdown=simulation_output["Queue"] >= 1,
