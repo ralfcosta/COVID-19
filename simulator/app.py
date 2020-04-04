@@ -305,11 +305,7 @@ def run_queue_model(dataset, params_simulation):
 
 def calculate_input_hospital_queue(model_output, cases_df, place, date):
 
-    df = (cases_df
-            .assign(cases=lambda df: df.I.fillna(df.I))
-            .assign(newly_infected=lambda df: df.cases - df.cases.shift(1) + df.R - df.R.shift(1))
-            .assign(newly_R=lambda df: df.R.diff())
-            .rename(columns={'cases': 'totalCases OR I'})) 
+    S, E, I, R, t = model_output
 
     previousCases = (
         cases_df
@@ -326,8 +322,7 @@ def calculate_input_hospital_queue(model_output, cases_df, place, date):
     previousCases = previousCases.reset_index()
     previousCases = previousCases['newCases']
     cut_after = previousCases.shape[0]
-
-    S, E, I, R, t = model_output
+    print(previousCases.head())
 
     pred = pd.DataFrame(index=(pd.date_range(start=date, periods=t.shape[0])
                                     .strftime('%Y-%m-%d')),
@@ -345,8 +340,9 @@ def calculate_input_hospital_queue(model_output, cases_df, place, date):
     df = df[pd.notna(df.newly_infected)]
     df = df.reset_index().rename(columns={'index':'day'})
     df = df['newly_infected']
+    print(df.head())
 
-    df = pd.concat(previousCases,df)
+    df = pd.append(previousCases.to_frame(),df)
     df = df.reset_index()
 
     return df, cut_after
