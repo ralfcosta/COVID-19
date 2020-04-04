@@ -14,6 +14,7 @@ from datetime import datetime, timedelta
 from viz import prep_tidy_data_to_plot, make_combined_chart, plot_r0
 from formats import global_format_func
 from json import dumps
+import pdb
 from covid19.estimation import ReproductionNumber
 
 MIN_CASES_TH = 10
@@ -311,46 +312,49 @@ def calculate_input_hospital_queue(model_output, place, date):
     NI = np.add(pd.DataFrame(I).apply(lambda x: x - x.shift(1)).values,
                 pd.DataFrame(R).apply(lambda x: x - x.shift(1)).values)
 
-    pred =pd.DataFrame({'Exposed': E.reshape(size),
+    pred = (pd.DataFrame({'Exposed': E.reshape(size),
                          'Infected': I.reshape(size),
                          'Removed': R.reshape(size),
                          'Newly Infected': NI.reshape(size),
                          'Run': np.arange(size) % sample_size,
-                         'Day': np.floor(np.arange(size) / sample_size) + 1})
+                         'Day': np.floor(np.arange(size) / sample_size) + 1}))
     
-    pred2 = pred.assign(Date=pred['Day'].apply(lambda x: pd.to_datetime(date) + timedelta(days=(x-1))))
+
+    pred = pred.assign(Date=pred['Day'].apply(lambda x: pd.to_datetime(date) + timedelta(days=(x-1))))
     
     def droplevel_col_index(df: pd.DataFrame):
         df.columns = df.columns.droplevel()
         return df
 
-    pred = pd.DataFrame(index=(pd.date_range(start=date, periods=t.shape[0])
-                                    .strftime('%Y-%m-%d')),
-                            data={'S': S.mean(axis=1),
-                                    'E': E.mean(axis=1),
-                                    'I': I.mean(axis=1),
-                                    'R': R.mean(axis=1)})
+    pdb.set_trace()
 
-    df = (pred
-            .assign(cases=lambda df: df.I.fillna(df.I))
-            .assign(newly_infected=lambda df: df.cases - df.cases.shift(1) + df.R - df.R.shift(1))
-            .assign(newly_R=lambda df: df.R.diff())
-            .rename(columns={'cases': 'totalCases OR I'})) 
-    
-    df = df[pd.notna(df.newly_infected)]
-    df = df.reset_index().rename(columns={'index':'day'})
-
-    print(df)
-
-    pred2 = (pred2[['Exposed', 'Infected', 'Newly Infected', 'Day']]
-                .groupby("Day")
+    df = (pred[['Exposed', 'Infected', 'Newly Infected', 'Date']]
+                .groupby("Date")
                 .agg({"Newly Infected": [np.mean, np.std]})
                 .pipe(droplevel_col_index)
                 .assign(upper=lambda df: df["mean"] + df["std"])
                 .assign(lower=lambda df: df["mean"] - df["std"])
                 .add_prefix("Newly Infected" + "_"))
 
-    print(pred2)
+    
+
+    # pred = pd.DataFrame(index=(pd.date_range(start=date, periods=t.shape[0])
+    #                                 .strftime('%Y-%m-%d')),
+    #                         data={'S': S.mean(axis=1),
+    #                                 'E': E.mean(axis=1),
+    #                                 'I': I.mean(axis=1),
+    #                                 'R': R.mean(axis=1)})
+
+    # df = (pred
+    #         .assign(cases=lambda df: df.I.fillna(df.I))
+    #         .assign(newly_infected=lambda df: df.cases - df.cases.shift(1) + df.R - df.R.shift(1))
+    #         .assign(newly_R=lambda df: df.R.diff())
+    #         .rename(columns={'cases': 'totalCases OR I'})) 
+    
+    df = df[pd.notna(df["Newly Infected"])]
+    df = df.reset_index().rename(columns={'index':'day'})
+
+    print(df)
 
     return df
 
