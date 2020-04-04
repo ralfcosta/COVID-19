@@ -249,7 +249,7 @@ def run_queue_simulation(data, bar, bar_text, params={}):
             self.audit_capacity.append(self.capacity)
             self.audit_capacity_icu.append(self.capacity_icu)
 
-            self.audit_data(self.data)
+            self.audit_data.append(self.data)
 
             return
 
@@ -529,7 +529,7 @@ def run_queue_simulation(data, bar, bar_text, params={}):
             while True:
                 
                 # Call audit (pass simulation time to hospital.audit)
-                self.hospital.data = g.covid_cases['data'][math.floor(self.env.now)]
+                self.hospital.data = g.covid_cases['day'][math.floor(self.env.now)]
                 self.hospital.audit(self.env.now)
                 # Delay until next call
                 yield self.env.timeout(g.audit_interval)

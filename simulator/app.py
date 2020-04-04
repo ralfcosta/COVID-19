@@ -221,7 +221,9 @@ def make_param_widgets_hospital_queue(city, defaults=DEFAULT_PARAMS):
             "total_beds": total_beds,
             "total_beds_icu": total_beds_icu,
             "available_rate": available_rate,
-            "available_rate_icu": available_rate_icu}
+            "available_rate_icu": available_rate_icu,
+            # TODO: add on front-end
+            "icu_death_rate": DEFAULT_PARAMS['icu_death_rate']}
 
 @st.cache
 def make_NEIR0(cases_df, population_df, place, date):
@@ -292,6 +294,7 @@ def plot_EI(model_output, scale):
 
 @cache_on_button_press('Simular Modelo de Filas')
 def run_queue_model(dataset, params_simulation):
+
         bar_text = st.empty()
         bar = st.progress(0)
         bar_text.text('Processando filas...')
@@ -307,22 +310,26 @@ def calculate_input_hospital_queue(model_output, cases_df, place, date):
 
     S, E, I, R, t = model_output
 
-    previousCases = (
-        cases_df
-        [place]
-        ['newCases']
-        [:date]
-    )
+    previous_cases = cases_df["São Paulo/SP"]
+    
+    all_dates = pd.date_range(start='2020-02-25', end=date).strftime('%Y-%m-%d')
+    all_dates_df = pd.DataFrame(index=all_dates,
+                                data={"dummy": np.zeros(len(all_dates))})
 
-    init = previousCases.index[0]
-    final = previousCases.index[previousCases.shape[0]-1]
-    idx = pd.date_range(init, final)
-    previousCases.index = pd.DatetimeIndex(previousCases.index)
-    previousCases = previousCases.reindex(idx, fill_value=0)
-    previousCases = previousCases.reset_index()
-    previousCases = previousCases['newCases']
-    cut_after = previousCases.shape[0]
-    print(previousCases.head())
+    previous_cases = all_dates_df.join(previous_cases, how='outer')
+    previous_cases = previous_cases.assign(newCases=previous_cases['newCases'].fillna(0))
+    cut_after = previous_cases.shape[0]
+
+    # init = previousCases.index[0]
+    # final = previousCases.index[previousCases.shape[0]-1]
+    # idx = pd.date_range(init, final)
+    # previousCases.index = pd.DatetimeIndex(previousCases.index)
+    # previousCases = previousCases.reindex(idx, fill_value=0)
+    # previousCases = previousCases.reset_index()
+    # previousCases = previousCases['newCases']
+
+
+    # print(previousCases.head())
 
     pred = pd.DataFrame(index=(pd.date_range(start=date, periods=t.shape[0])
                                     .strftime('%Y-%m-%d')),
@@ -332,18 +339,14 @@ def calculate_input_hospital_queue(model_output, cases_df, place, date):
                                     'R': R.mean(axis=1)})
 
     df = (pred
+            .join(previous_cases, how='outer')
             .assign(cases=lambda df: df.I.fillna(df.I))
             .assign(newly_infected=lambda df: df.cases - df.cases.shift(1) + df.R - df.R.shift(1))
             .assign(newly_R=lambda df: df.R.diff())
             .rename(columns={'cases': 'totalCases OR I'})) 
 
-    df = df[pd.notna(df.newly_infected)]
+    df = df.assign(newly_infected=df['newly_infected'].combine_first(df['newCases']))
     df = df.reset_index().rename(columns={'index':'day'})
-    df = df['newly_infected']
-    print(df.head())
-
-    df = pd.append(previousCases.to_frame(),df)
-    df = df.reset_index()
 
     return df, cut_after
 
@@ -498,7 +501,6 @@ if __name__ == '__main__':
 
         dataset = dataset[['day', 'newly_infected']].copy()
         dataset = dataset.assign(hospitalizados=round(dataset['newly_infected']*0.14))
-
         simulation_output = run_queue_model(dataset, params_simulation)
         simulation_output.drop(simulation_output.index[:cut_after])
         simulation_output = simulation_output.join(dataset, how='inner')
@@ -507,8 +509,9 @@ if __name__ == '__main__':
                                                      is_breakdown_icu=simulation_output["ICU_Queue"] >= 1)
 
         def get_breakdown_start(column):
-            breakdown_date = simulation_output[simulation_output[column] == 1].iloc[0]['day'] 
-            breakdown_date = datetime.strptime(breakdown_date, "%Y-%m-%d").strftime("%d/%m/%Y")
+
+            breakdown_date = simulation_output[simulation_output[column]].iloc[0]['day']
+            breakdown_date = breakdown_date.strftime("%d/%m/%Y")
             return breakdown_date
 
         st.markdown(f"Colapso dos leitos: **{get_breakdown_start('is_breakdown')}**")
