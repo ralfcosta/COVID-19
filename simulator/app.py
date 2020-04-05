@@ -293,18 +293,27 @@ def plot_EI(model_output, scale):
                                show_uncertainty=True)
 
 @cache_on_button_press('Simular Modelo de Filas')
-def run_queue_model(dataset, params_simulation):
+def run_queue_model(model_output , cases_df, w_place, w_date, params_simulation):
 
         bar_text = st.empty()
+
+        bar_text.text('Estimando crecscimento de infectados...')
+
+        dataset, cut_after = calculate_input_hospital_queue(model_output , cases_df, w_place, w_date)
+        dataset = dataset[['day', 'newly_infected_mean']].copy()
+        dataset = dataset.assign(hospitalizados=round(dataset['newly_infected_mean']*0.14))
+
         bar = st.progress(0)
+        
         bar_text.text('Processando filas...')
         simulation_output = run_queue_simulation(dataset, bar, bar_text, params_simulation)
 
         bar.progress(1.)
         bar_text.text("Processamento finalizado.")
+
         st.markdown("### Resultados")
 
-        return simulation_output
+        return simulation_output, cut_after
 
 def calculate_input_hospital_queue(model_output, cases_df, place, date):
 
@@ -500,15 +509,9 @@ if __name__ == '__main__':
         st.markdown(texts.HOSPITAL_QUEUE_SIMULATION)
 
         params_simulation = make_param_widgets_hospital_queue(w_place)
-        dataset,cut_after = calculate_input_hospital_queue(model_output , cases_df, w_place, w_date)
-
-        dataset = dataset[['day', 'newly_infected_mean']].copy()
-        dataset = dataset.assign(hospitalizados=round(dataset['newly_infected_mean']*0.14))
-        simulation_output = run_queue_model(dataset, params_simulation)
-
+        simulation_output, cut_after = run_queue_model(model_output , cases_df, w_place, w_date, params_simulation)
         simulation_output.drop(simulation_output.index[:cut_after])
-        simulation_output = simulation_output.join(dataset, how='inner')
-            
+
         simulation_output = simulation_output.assign(is_breakdown=simulation_output["Queue"] >= 1,
                                                      is_breakdown_icu=simulation_output["ICU_Queue"] >= 1)
 
