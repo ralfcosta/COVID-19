@@ -483,12 +483,22 @@ if __name__ == '__main__':
                                                      is_breakdown_icu=simulation_output["ICU_Queue"] >= 1)
 
         def get_breakdown_start(column):
-            breakdown_date = simulation_output[simulation_output[column] == 1].iloc[0]['day'] 
-            breakdown_date = datetime.strptime(breakdown_date, "%Y-%m-%d").strftime("%d/%m/%Y")
-            return breakdown_date
 
-        st.markdown(f"Colapso dos leitos: **{get_breakdown_start('is_breakdown')}**")
-        st.markdown(f"Colapso dos leitos (UTI): **{get_breakdown_start('is_breakdown_icu')}**")
+            breakdown_days = simulation_output[simulation_output[column] == 1]
+
+            if (breakdown_days.size >= 1):
+                breakdown_date = datetime.strptime(breakdown_days.iloc[0]['day'], "%Y-%m-%d").strftime("%d/%m/%Y")
+                return breakdown_date
+            else:
+                return None
+
+        breakdown_date = get_breakdown_start('is_breakdown')
+        if breakdown_date:
+            st.markdown(f"Colapso dos leitos: **{breakdown_date}**")
+        
+        breakdown_date_icu = get_breakdown_start('is_breakdown_icu')
+        if breakdown_date_icu:
+            st.markdown(f"Colapso dos leitos (UTI): **{breakdown_date_icu}**")
 
         st.altair_chart(make_simulation_chart(simulation_output, "Occupied_beds", "Ocupação de leitos comuns"))
         st.altair_chart(make_simulation_chart(simulation_output, "ICU_Occupied_beds", "Ocupação de leitos de UTI"))
