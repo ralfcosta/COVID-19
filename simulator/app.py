@@ -14,7 +14,6 @@ from datetime import datetime, timedelta
 from viz import prep_tidy_data_to_plot, make_combined_chart, plot_r0
 from formats import global_format_func
 from json import dumps
-import pdb
 from covid19.estimation import ReproductionNumber
 
 MIN_CASES_TH = 10
@@ -33,6 +32,7 @@ DEFAULT_PARAMS = {
     'length_of_stay_covid_uti': 8,
     'icu_rate': .1,
     'icu_rate_after_bed': .08,
+    'icu_death_rate': .1,
 
     'total_beds': 12222,
     'total_beds_icu': 2421,
@@ -221,7 +221,9 @@ def make_param_widgets_hospital_queue(city, defaults=DEFAULT_PARAMS):
             "total_beds": total_beds,
             "total_beds_icu": total_beds_icu,
             "available_rate": available_rate,
-            "available_rate_icu": available_rate_icu}
+            "available_rate_icu": available_rate_icu,
+            # TODO: add on front-end
+            "icu_death_rate": DEFAULT_PARAMS['icu_death_rate']}
 
 @st.cache
 def make_NEIR0(cases_df, population_df, place, date):
@@ -292,6 +294,7 @@ def plot_EI(model_output, scale):
 
 @cache_on_button_press('Simular Modelo de Filas')
 def run_queue_model(dataset, params_simulation):
+
         bar_text = st.empty()
         bar = st.progress(0)
         bar_text.text('Processando filas...')
@@ -303,60 +306,52 @@ def run_queue_model(dataset, params_simulation):
 
         return simulation_output
 
-def calculate_input_hospital_queue(model_output, place, date):
+def calculate_input_hospital_queue(model_output, cases_df, place, date):
 
     S, E, I, R, t = model_output
+    previous_cases = cases_df[place]
 
+    # Formatting previous dates
+    all_dates = pd.date_range(start=MIN_DATA_BRAZIL, end=date).strftime('%Y-%m-%d')
+    all_dates_df = pd.DataFrame(index=all_dates,
+                                data={"dummy": np.zeros(len(all_dates))})
+    previous_cases = all_dates_df.join(previous_cases, how='outer')['newCases']
+    cut_after = previous_cases.shape[0]
+
+    # Calculating newly infected for all samples
     size = sample_size*model.params['t_max']
-
     NI = np.add(pd.DataFrame(I).apply(lambda x: x - x.shift(1)).values,
                 pd.DataFrame(R).apply(lambda x: x - x.shift(1)).values)
-
-    pred = (pd.DataFrame({'Exposed': E.reshape(size),
-                         'Infected': I.reshape(size),
-                         'Removed': R.reshape(size),
-                         'Newly Infected': NI.reshape(size),
-                         'Run': np.arange(size) % sample_size,
-                         'Day': np.floor(np.arange(size) / sample_size) + 1}))
-    
-
+    pred = (pd.DataFrame({'Newly Infected': NI.reshape(size),
+                          'Run': np.arange(size) % sample_size,
+                          'Day': np.floor(np.arange(size) / sample_size) + 1}))
     pred = pred.assign(Date=pred['Day'].apply(lambda x: pd.to_datetime(date) + timedelta(days=(x-1))))
-    
+
+    # Calculating standard deviation and mean
     def droplevel_col_index(df: pd.DataFrame):
         df.columns = df.columns.droplevel()
         return df
 
-    pdb.set_trace()
-
-    df = (pred[['Exposed', 'Infected', 'Newly Infected', 'Date']]
+    df = (pred[['Newly Infected', 'Date']]
                 .groupby("Date")
                 .agg({"Newly Infected": [np.mean, np.std]})
                 .pipe(droplevel_col_index)
                 .assign(upper=lambda df: df["mean"] + df["std"])
                 .assign(lower=lambda df: df["mean"] - df["std"])
-                .add_prefix("Newly Infected" + "_"))
+                .add_prefix("newly_infected_")
+                .join(previous_cases, how='outer')
+            )
 
-    
+    # Formatting the final otput
+    df = (df
+        .assign(newly_infected_mean=df['newly_infected_mean'].combine_first(df['newCases']))
+        .assign(newly_infected_upper=df['newly_infected_upper'].combine_first(df['newCases']))
+        .assign(newly_infected_lower=df['newly_infected_lower'].combine_first(df['newCases']))
+        .drop(columns=['newCases', 'newly_infected_std'])
+        .reset_index()
+        .rename(columns={'index':'day'}))
 
-    # pred = pd.DataFrame(index=(pd.date_range(start=date, periods=t.shape[0])
-    #                                 .strftime('%Y-%m-%d')),
-    #                         data={'S': S.mean(axis=1),
-    #                                 'E': E.mean(axis=1),
-    #                                 'I': I.mean(axis=1),
-    #                                 'R': R.mean(axis=1)})
-
-    # df = (pred
-    #         .assign(cases=lambda df: df.I.fillna(df.I))
-    #         .assign(newly_infected=lambda df: df.cases - df.cases.shift(1) + df.R - df.R.shift(1))
-    #         .assign(newly_R=lambda df: df.R.diff())
-    #         .rename(columns={'cases': 'totalCases OR I'})) 
-    
-    df = df[pd.notna(df["Newly Infected"])]
-    df = df.reset_index().rename(columns={'index':'day'})
-
-    print(df)
-
-    return df
+    return df, cut_after
 
 def estimate_r0(cases_df, place, sample_size, min_days, w_date):
     used_brazil = False
@@ -505,12 +500,13 @@ if __name__ == '__main__':
         st.markdown(texts.HOSPITAL_QUEUE_SIMULATION)
 
         params_simulation = make_param_widgets_hospital_queue(w_place)
-        dataset = calculate_input_hospital_queue(model_output ,w_place, w_date)
+        dataset,cut_after = calculate_input_hospital_queue(model_output , cases_df, w_place, w_date)
 
-        dataset = dataset[['day', 'newly_infected']].copy()
-        dataset = dataset.assign(hospitalizados=round(dataset['newly_infected']*0.14))
-
+        dataset = dataset[['day', 'newly_infected_mean']].copy()
+        dataset = dataset.assign(hospitalizados=round(dataset['newly_infected_mean']*0.14))
         simulation_output = run_queue_model(dataset, params_simulation)
+
+        simulation_output.drop(simulation_output.index[:cut_after])
         simulation_output = simulation_output.join(dataset, how='inner')
             
         simulation_output = simulation_output.assign(is_breakdown=simulation_output["Queue"] >= 1,
@@ -518,10 +514,10 @@ if __name__ == '__main__':
 
         def get_breakdown_start(column):
 
-            breakdown_days = simulation_output[simulation_output[column] == 1]
-
+            breakdown_days = simulation_output[simulation_output[column]]
+            
             if (breakdown_days.size >= 1):
-                breakdown_date = datetime.strptime(breakdown_days.iloc[0]['day'], "%Y-%m-%d").strftime("%d/%m/%Y")
+                breakdown_date = breakdown_days.Data.iloc[0].strftime("%d/%m/%Y")
                 return breakdown_date
             else:
                 return None

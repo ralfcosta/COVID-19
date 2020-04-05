@@ -64,6 +64,20 @@ HOSPITAL_QUEUE_SIMULATION= '''
 
 '''
 
+HOSPITAL_QUEUE_INFO= '''
+### Modelamento do Sistema de Saúde Municipal
+
+Os resultados abaixo apresentam a evolução do sistema de saúde do município de acordo com uma simulação simplificada fundamentada em teoria de filas. Mais informações sobre esse modelo [aqui] (https://github.com/andrelnunes/COVID-19).
+'''
+
+HOSPITAL_GRAPH_DESCRIPTION= ''''
+###Previsão de Colapso:
+
+**(!) Importante: Os resultados apresentados são preliminares e estão em fase de validação.
+O eixo do tempo do modelo abaixo considera que 0 é o dia em que foram observadas as condições iniciais inseridas no menu à esquerda. É possível selecionar o estado ou município, além da data, desejado. Neste caso, o dia 0 será a data escolhida.
+O sistema é considerado colapsado quando há formação de filas, consequente da lotação dos leitos.
+'''
+
 DATA_SOURCES = '''
 ### Fontes dos dados
 
