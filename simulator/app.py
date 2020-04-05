@@ -301,23 +301,23 @@ def run_queue_model(model_output , cases_df, w_place, w_date, params_simulation)
 
         dataset, cut_after = calculate_input_hospital_queue(model_output , cases_df, w_place, w_date)
         
-        for execution_columnm, execution_description in [('newly_infected_lower', 'otimista'),
-                                                         ('newly_infected_mean', 'médio'),
-                                                         ('newly_infected_upper', 'pessimista')]:
+        for execution_columnm, execution_description in [('newly_infected_lower', 'Otimista'),
+                                                         ('newly_infected_mean', 'Médio'),
+                                                         ('newly_infected_upper', 'Pessimista')]:
             
             dataset = dataset.assign(hospitalizados=round(dataset[execution_columnm]*0.14))
 
             bar_text = st.empty()
             bar = st.progress(0)
             
-            bar_text.text(f'Processando do cenário {execution_description}...')
+            bar_text.text(f'Processando o cenário {execution_description.lower()}...')
             simulation_output = (run_queue_simulation(dataset, bar, bar_text, params_simulation)
                 .join(dataset, how='inner'))
 
-            simulations_outputs.append((execution_columnm, simulation_output))
+            simulations_outputs.append((execution_columnm, execution_description, simulation_output))
 
             bar.progress(1.)
-            bar_text.text(f"Processamento do cenário {execution_description} finalizado.")
+            bar_text.text(f"Processamento do cenário {execution_description.lower()} finalizado.")
 
         return simulations_outputs, cut_after
 
@@ -517,11 +517,9 @@ if __name__ == '__main__':
         params_simulation = make_param_widgets_hospital_queue(w_place)
         simulation_outputs, cut_after = run_queue_model(model_output , cases_df, w_place, w_date, params_simulation)
 
-        st.markdown("### Resultados")
+        st.markdown(texts.HOSPITAL_BREAKDOWN_DESCRIPTION)
 
-        for _, simulation_output in simulation_outputs:
-            
-            simulation_output.drop(simulation_output.index[:cut_after])
+        def get_breakdown(description, simulation_output):
 
             simulation_output = simulation_output.assign(is_breakdown=simulation_output["Queue"] >= 1,
                                                          is_breakdown_icu=simulation_output["ICU_Queue"] >= 1)
@@ -529,28 +527,37 @@ if __name__ == '__main__':
             def get_breakdown_start(column):
 
                 breakdown_days = simulation_output[simulation_output[column]]
-                
+
                 if (breakdown_days.size >= 1):
                     breakdown_date = breakdown_days.Data.iloc[0].strftime("%d/%m/%Y")
                     return breakdown_date
                 else:
-                    return None
-
-            breakdown_date = get_breakdown_start('is_breakdown')
-            if breakdown_date:
-                st.markdown(f"Colapso dos leitos: **{breakdown_date}**")
+                    return "N/A"
             
-            breakdown_date_icu = get_breakdown_start('is_breakdown_icu')
-            if breakdown_date_icu:
-                st.markdown(f"Colapso dos leitos (UTI): **{breakdown_date_icu}**")
+            return (description,
+                    get_breakdown_start('is_breakdown'), 
+                    get_breakdown_start('is_breakdown_icu'))
 
-            st.altair_chart(make_simulation_chart(simulation_output, "Occupied_beds", "Ocupação de leitos comuns"))
-            st.altair_chart(make_simulation_chart(simulation_output, "ICU_Occupied_beds", "Ocupação de leitos de UTI"))
-            st.altair_chart(make_simulation_chart(simulation_output, "Queue", "Fila de pacientes"))
-            st.altair_chart(make_simulation_chart(simulation_output, "ICU_Queue", "Fila de pacientes UTI"))
+        st.write(pd.DataFrame(
+            data=[get_breakdown(description, simulation_output) for _, description, simulation_output in simulation_outputs],
+            columns=['Cenário', 'Leitos comuns', 'Leitos UTI'])
+        )
+
+        st.markdown("### Visualizações")
+
+        plot_output = pd.concat(
+            [(simulation_output
+                .drop(simulation_output.index[:cut_after])
+                .assign(description=description)) 
+             for _, description, simulation_output in simulation_outputs])
+            
+        st.altair_chart(make_simulation_chart(plot_output, "Occupied_beds", "Ocupação de leitos comuns"))
+        st.altair_chart(make_simulation_chart(plot_output, "ICU_Occupied_beds", "Ocupação de leitos de UTI"))
+        st.altair_chart(make_simulation_chart(plot_output, "Queue", "Fila de pacientes"))
+        st.altair_chart(make_simulation_chart(plot_output, "ICU_Queue", "Fila de pacientes UTI"))
 
         #TODO: change download method
-        href = make_download_simulation_df(simulation_output, 'queue-simulator.3778.care.csv')
+        href = make_download_simulation_df(plot_output, 'queue-simulator.3778.care.csv')
         st.markdown(href, unsafe_allow_html=True)
 
     st.markdown(texts.DATA_SOURCES)

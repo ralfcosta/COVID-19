@@ -70,12 +70,23 @@ HOSPITAL_QUEUE_INFO= '''
 Os resultados abaixo apresentam a evolução do sistema de saúde do município de acordo com uma simulação simplificada fundamentada em teoria de filas. Mais informações sobre esse modelo [aqui] (https://github.com/andrelnunes/COVID-19).
 '''
 
-HOSPITAL_GRAPH_DESCRIPTION= ''''
-###Previsão de Colapso:
+HOSPITAL_GRAPH_DESCRIPTION= '''
+### Previsão de Colapso:
 
 **(!) Importante: Os resultados apresentados são preliminares e estão em fase de validação.
 O eixo do tempo do modelo abaixo considera que 0 é o dia em que foram observadas as condições iniciais inseridas no menu à esquerda. É possível selecionar o estado ou município, além da data, desejado. Neste caso, o dia 0 será a data escolhida.
 O sistema é considerado colapsado quando há formação de filas, consequente da lotação dos leitos.
+'''
+
+HOSPITAL_BREAKDOWN_DESCRIPTION= '''
+### Previsão de Colapso:
+
+Os colapsos foram estimados para três cenários executados com base nos resultados do SEIR:
+
+- Cenário *Otimista*: utilizando o valor médio de novos infectados menos o desvio padrão das execuções do modelo SEIR.
+- Cenário *Médio*: utilizando o valor médio de novos infectados das execuções do modelo SEIR.
+- Cenário *Pessimista*: utilizando o valor médio de novos infectados mais o desvio padrão das execuções do modelo SEIR.
+
 '''
 
 DATA_SOURCES = '''

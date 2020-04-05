@@ -146,15 +146,21 @@ def make_simulation_chart(simulation_output, metric, title):
 
     metric_name = {"Occupied_beds": "Leitos Ocupados",
                    "ICU_Occupied_beds": "Leitos Ocupados (UTI)",
-                   "Queue": "Pacienentas na fila",
-                   "ICU_Queue": "Pacienentas na fila (UTI)"}
+                   "Queue": "Pacientes na fila",
+                   "ICU_Queue": "Pacientes na fila (UTI)"}
 
     return (alt.Chart(simulation_output,
                      width=600,
                      height=300,
                      title=title)
                 .mark_line()
-                .encode(x=alt.X("day:T", title="Data", axis=alt.Axis(format = ("%d/%m"), labelAngle=45)), y=alt.Y(f"{metric}:Q", title=metric_name[metric]))
+                .encode(x=alt.X("day:T",
+                                title="Data",
+                                axis=alt.Axis(format = ("%d/%m"),
+                                labelAngle=45)),
+                        y=alt.Y(f"{metric}:Q",
+                                title=metric_name[metric]),
+                        color="description")
                 .configure_title(fontSize=16)
                 .configure_axis(labelFontSize=12, titleFontSize=12)
                 .configure_legend(labelFontSize=14, titleFontSize=14))
