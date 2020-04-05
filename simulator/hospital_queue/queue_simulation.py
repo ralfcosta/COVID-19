@@ -527,10 +527,10 @@ def run_queue_simulation(data, bar, bar_text, params={}):
 
             # Continually generate audit requests until end of model run
             while True:
-                
+
                 # Call audit (pass simulation time to hospital.audit)
                 self.hospital.data = g.covid_cases['day'][math.floor(self.env.now)]
-                self.hospital.audit(self.env.now)
+                self.hospital.audit(self.env.now)                
                 # Delay until next call
                 yield self.env.timeout(g.audit_interval)
 
@@ -542,11 +542,12 @@ def run_queue_simulation(data, bar, bar_text, params={}):
             :param delay: number of days after complete resource saturation in
                           which to stop simulation
             """
+            while True:
 
-            while self.env.now < g.sim_duration:
-
+                if  self.env.now > g.sim_duration - 2:
+                    break
                 # Bed and ICU saturation condition
-                if self.hospital.queue_icu_count > 1 and \
+                elif self.hospital.queue_icu_count > 1 and \
                         self.hospital.queue_count > 1:
 
                     print('Saturation reached at %f' % self.env.now)

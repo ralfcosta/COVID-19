@@ -309,10 +309,9 @@ def run_queue_model(dataset, params_simulation):
 def calculate_input_hospital_queue(model_output, cases_df, place, date):
 
     S, E, I, R, t = model_output
+    previous_cases = cases_df[place]
 
-    previous_cases = cases_df["São Paulo/SP"]
-    
-    all_dates = pd.date_range(start='2020-02-25', end=date).strftime('%Y-%m-%d')
+    all_dates = pd.date_range(start=MIN_DATA_BRAZIL, end=date).strftime('%Y-%m-%d')
     all_dates_df = pd.DataFrame(index=all_dates,
                                 data={"dummy": np.zeros(len(all_dates))})
 
@@ -497,11 +496,12 @@ if __name__ == '__main__':
         st.markdown(texts.HOSPITAL_QUEUE_SIMULATION)
 
         params_simulation = make_param_widgets_hospital_queue(w_place)
-        dataset,cut_after = calculate_input_hospital_queue(model_output , cases_df,w_place, w_date)
+        dataset,cut_after = calculate_input_hospital_queue(model_output , cases_df, w_place, w_date)
 
         dataset = dataset[['day', 'newly_infected']].copy()
         dataset = dataset.assign(hospitalizados=round(dataset['newly_infected']*0.14))
         simulation_output = run_queue_model(dataset, params_simulation)
+
         simulation_output.drop(simulation_output.index[:cut_after])
         simulation_output = simulation_output.join(dataset, how='inner')
             
@@ -510,12 +510,21 @@ if __name__ == '__main__':
 
         def get_breakdown_start(column):
 
-            breakdown_date = simulation_output[simulation_output[column]].iloc[0]['day']
-            breakdown_date = breakdown_date.strftime("%d/%m/%Y")
-            return breakdown_date
+            breakdown_days = simulation_output[simulation_output[column]]
+            
+            if (breakdown_days.size >= 1):
+                breakdown_date = breakdown_days.Data.iloc[0].strftime("%d/%m/%Y")
+                return breakdown_date
+            else:
+                return None
 
-        st.markdown(f"Colapso dos leitos: **{get_breakdown_start('is_breakdown')}**")
-        st.markdown(f"Colapso dos leitos (UTI): **{get_breakdown_start('is_breakdown_icu')}**")
+        breakdown_date = get_breakdown_start('is_breakdown')
+        if breakdown_date:
+            st.markdown(f"Colapso dos leitos: **{breakdown_date}**")
+        
+        breakdown_date_icu = get_breakdown_start('is_breakdown_icu')
+        if breakdown_date_icu:
+            st.markdown(f"Colapso dos leitos (UTI): **{breakdown_date_icu}**")
 
         st.altair_chart(make_simulation_chart(simulation_output, "Occupied_beds", "Ocupação de leitos comuns"))
         st.altair_chart(make_simulation_chart(simulation_output, "ICU_Occupied_beds", "Ocupação de leitos de UTI"))
