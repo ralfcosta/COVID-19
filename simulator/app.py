@@ -10,7 +10,7 @@ from hospital_queue.queue_simulation import run_queue_simulation
 from viz import prep_tidy_data_to_plot, make_combined_chart, make_simulation_chart
 from formats import global_format_func
 from hospital_queue.confirmation_button import cache_on_button_press
-from datetime import datetime
+from datetime import datetime, timedelta
 from viz import prep_tidy_data_to_plot, make_combined_chart, plot_r0
 from formats import global_format_func
 from json import dumps
@@ -32,6 +32,7 @@ DEFAULT_PARAMS = {
     'length_of_stay_covid_uti': 8,
     'icu_rate': .1,
     'icu_rate_after_bed': .08,
+    'icu_death_rate': .1,
 
     'total_beds': 12222,
     'total_beds_icu': 2421,
@@ -220,7 +221,9 @@ def make_param_widgets_hospital_queue(city, defaults=DEFAULT_PARAMS):
             "total_beds": total_beds,
             "total_beds_icu": total_beds_icu,
             "available_rate": available_rate,
-            "available_rate_icu": available_rate_icu}
+            "available_rate_icu": available_rate_icu,
+            # TODO: add on front-end
+            "icu_death_rate": DEFAULT_PARAMS['icu_death_rate']}
 
 @st.cache
 def make_NEIR0(cases_df, population_df, place, date):
@@ -290,39 +293,80 @@ def plot_EI(model_output, scale):
                                show_uncertainty=True)
 
 @cache_on_button_press('Simular Modelo de Filas')
-def run_queue_model(dataset, params_simulation):
+def run_queue_model(model_output , cases_df, w_place, w_date, params_simulation):
+
         bar_text = st.empty()
-        bar = st.progress(0)
-        bar_text.text('Processando filas...')
-        simulation_output = run_queue_simulation(dataset, bar, bar_text, params_simulation)
+        bar_text.text('Estimando crecscimento de infectados...')
+        simulations_outputs = []
 
-        bar.progress(1.)
-        bar_text.text("Processamento finalizado.")
-        st.markdown("### Resultados")
+        dataset, cut_after = calculate_input_hospital_queue(model_output , cases_df, w_place, w_date)
+        
+        for execution_columnm, execution_description in [('newly_infected_lower', 'Otimista'),
+                                                         ('newly_infected_mean', 'Médio'),
+                                                         ('newly_infected_upper', 'Pessimista')]:
+            
+            dataset = dataset.assign(hospitalizados=round(dataset[execution_columnm]*0.14))
 
-        return simulation_output
+            bar_text = st.empty()
+            bar = st.progress(0)
+            
+            bar_text.text(f'Processando o cenário {execution_description.lower()}...')
+            simulation_output = (run_queue_simulation(dataset, bar, bar_text, params_simulation)
+                .join(dataset, how='inner'))
 
-def calculate_input_hospital_queue(model_output, place, date):
+            simulations_outputs.append((execution_columnm, execution_description, simulation_output))
+
+            bar.progress(1.)
+            bar_text.text(f"Processamento do cenário {execution_description.lower()} finalizado.")
+
+        return simulations_outputs, cut_after
+
+def calculate_input_hospital_queue(model_output, cases_df, place, date):
 
     S, E, I, R, t = model_output
+    previous_cases = cases_df[place]
 
-    pred = pd.DataFrame(index=(pd.date_range(start=date, periods=t.shape[0])
-                                    .strftime('%Y-%m-%d')),
-                            data={'S': S.mean(axis=1),
-                                    'E': E.mean(axis=1),
-                                    'I': I.mean(axis=1),
-                                    'R': R.mean(axis=1)})
+    # Formatting previous dates
+    all_dates = pd.date_range(start=MIN_DATA_BRAZIL, end=date).strftime('%Y-%m-%d')
+    all_dates_df = pd.DataFrame(index=all_dates,
+                                data={"dummy": np.zeros(len(all_dates))})
+    previous_cases = all_dates_df.join(previous_cases, how='outer')['newCases']
+    cut_after = previous_cases.shape[0]
 
-    df = (pred
-            .assign(cases=lambda df: df.I.fillna(df.I))
-            .assign(newly_infected=lambda df: df.cases - df.cases.shift(1) + df.R - df.R.shift(1))
-            .assign(newly_R=lambda df: df.R.diff())
-            .rename(columns={'cases': 'totalCases OR I'})) 
+    # Calculating newly infected for all samples
+    size = sample_size*model.params['t_max']
+    NI = np.add(pd.DataFrame(I).apply(lambda x: x - x.shift(1)).values,
+                pd.DataFrame(R).apply(lambda x: x - x.shift(1)).values)
+    pred = (pd.DataFrame({'Newly Infected': NI.reshape(size),
+                          'Run': np.arange(size) % sample_size,
+                          'Day': np.floor(np.arange(size) / sample_size) + 1}))
+    pred = pred.assign(day=pred['Day'].apply(lambda x: pd.to_datetime(date) + timedelta(days=(x-1))))
 
-    df = df[pd.notna(df.newly_infected)]
-    df = df.reset_index().rename(columns={'index':'day'})
+    # Calculating standard deviation and mean
+    def droplevel_col_index(df: pd.DataFrame):
+        df.columns = df.columns.droplevel()
+        return df
 
-    return df
+    df = (pred[['Newly Infected', 'day']]
+                .groupby("day")
+                .agg({"Newly Infected": [np.mean, np.std]})
+                .pipe(droplevel_col_index)
+                .assign(upper=lambda df: df["mean"] + df["std"])
+                .assign(lower=lambda df: df["mean"] - df["std"])
+                .add_prefix("newly_infected_")
+                .join(previous_cases, how='outer')
+            )
+
+    # Formatting the final otput
+    df = (df
+        .assign(newly_infected_mean=df['newly_infected_mean'].combine_first(df['newCases']))
+        .assign(newly_infected_upper=df['newly_infected_upper'].combine_first(df['newCases']))
+        .assign(newly_infected_lower=df['newly_infected_lower'].combine_first(df['newCases']))
+        .drop(columns=['newCases', 'newly_infected_std'])
+        .reset_index()
+        .rename(columns={'index':'day'}))
+
+    return df, cut_after
 
 def estimate_r0(cases_df, place, sample_size, min_days, w_date):
     used_brazil = False
@@ -471,42 +515,49 @@ if __name__ == '__main__':
         st.markdown(texts.HOSPITAL_QUEUE_SIMULATION)
 
         params_simulation = make_param_widgets_hospital_queue(w_place)
-        dataset = calculate_input_hospital_queue(model_output ,w_place, w_date)
+        simulation_outputs, cut_after = run_queue_model(model_output , cases_df, w_place, w_date, params_simulation)
 
-        dataset = dataset[['day', 'newly_infected']].copy()
-        dataset = dataset.assign(hospitalizados=round(dataset['newly_infected']*0.14))
+        st.markdown(texts.HOSPITAL_BREAKDOWN_DESCRIPTION)
 
-        simulation_output = run_queue_model(dataset, params_simulation)
-        simulation_output = simulation_output.join(dataset, how='inner')
+        def get_breakdown(description, simulation_output):
+
+            simulation_output = simulation_output.assign(is_breakdown=simulation_output["Queue"] >= 1,
+                                                         is_breakdown_icu=simulation_output["ICU_Queue"] >= 1)
+
+            def get_breakdown_start(column):
+
+                breakdown_days = simulation_output[simulation_output[column]]
+
+                if (breakdown_days.size >= 1):
+                    breakdown_date = breakdown_days.Data.iloc[0].strftime("%d/%m/%Y")
+                    return breakdown_date
+                else:
+                    return "N/A"
             
-        simulation_output = simulation_output.assign(is_breakdown=simulation_output["Queue"] >= 1,
-                                                     is_breakdown_icu=simulation_output["ICU_Queue"] >= 1)
+            return (description,
+                    get_breakdown_start('is_breakdown'), 
+                    get_breakdown_start('is_breakdown_icu'))
 
-        def get_breakdown_start(column):
+        st.write(pd.DataFrame(
+            data=[get_breakdown(description, simulation_output) for _, description, simulation_output in simulation_outputs],
+            columns=['Cenário', 'Leitos comuns', 'Leitos UTI'])
+        )
 
-            breakdown_days = simulation_output[simulation_output[column] == 1]
+        st.markdown("### Visualizações")
 
-            if (breakdown_days.size >= 1):
-                breakdown_date = datetime.strptime(breakdown_days.iloc[0]['day'], "%Y-%m-%d").strftime("%d/%m/%Y")
-                return breakdown_date
-            else:
-                return None
-
-        breakdown_date = get_breakdown_start('is_breakdown')
-        if breakdown_date:
-            st.markdown(f"Colapso dos leitos: **{breakdown_date}**")
-        
-        breakdown_date_icu = get_breakdown_start('is_breakdown_icu')
-        if breakdown_date_icu:
-            st.markdown(f"Colapso dos leitos (UTI): **{breakdown_date_icu}**")
-
-        st.altair_chart(make_simulation_chart(simulation_output, "Occupied_beds", "Ocupação de leitos comuns"))
-        st.altair_chart(make_simulation_chart(simulation_output, "ICU_Occupied_beds", "Ocupação de leitos de UTI"))
-        st.altair_chart(make_simulation_chart(simulation_output, "Queue", "Fila de pacientes"))
-        st.altair_chart(make_simulation_chart(simulation_output, "ICU_Queue", "Fila de pacientes UTI"))
+        plot_output = pd.concat(
+            [(simulation_output
+                .drop(simulation_output.index[:cut_after])
+                .assign(description=description)) 
+             for _, description, simulation_output in simulation_outputs])
+            
+        st.altair_chart(make_simulation_chart(plot_output, "Occupied_beds", "Ocupação de leitos comuns"))
+        st.altair_chart(make_simulation_chart(plot_output, "ICU_Occupied_beds", "Ocupação de leitos de UTI"))
+        st.altair_chart(make_simulation_chart(plot_output, "Queue", "Fila de pacientes"))
+        st.altair_chart(make_simulation_chart(plot_output, "ICU_Queue", "Fila de pacientes UTI"))
 
         #TODO: change download method
-        href = make_download_simulation_df(simulation_output, 'queue-simulator.3778.care.csv')
+        href = make_download_simulation_df(plot_output, 'queue-simulator.3778.care.csv')
         st.markdown(href, unsafe_allow_html=True)
 
     st.markdown(texts.DATA_SOURCES)
