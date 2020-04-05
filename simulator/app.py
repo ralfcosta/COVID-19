@@ -306,7 +306,8 @@ def run_queue_model(model_output , cases_df, w_place, w_date, params_simulation)
         bar = st.progress(0)
         
         bar_text.text('Processando filas...')
-        simulation_output = run_queue_simulation(dataset, bar, bar_text, params_simulation)
+        simulation_output = (run_queue_simulation(dataset, bar, bar_text, params_simulation)
+            .join(dataset, how='inner'))
 
         bar.progress(1.)
         bar_text.text("Processamento finalizado.")
@@ -334,15 +335,15 @@ def calculate_input_hospital_queue(model_output, cases_df, place, date):
     pred = (pd.DataFrame({'Newly Infected': NI.reshape(size),
                           'Run': np.arange(size) % sample_size,
                           'Day': np.floor(np.arange(size) / sample_size) + 1}))
-    pred = pred.assign(Date=pred['Day'].apply(lambda x: pd.to_datetime(date) + timedelta(days=(x-1))))
+    pred = pred.assign(day=pred['Day'].apply(lambda x: pd.to_datetime(date) + timedelta(days=(x-1))))
 
     # Calculating standard deviation and mean
     def droplevel_col_index(df: pd.DataFrame):
         df.columns = df.columns.droplevel()
         return df
 
-    df = (pred[['Newly Infected', 'Date']]
-                .groupby("Date")
+    df = (pred[['Newly Infected', 'day']]
+                .groupby("day")
                 .agg({"Newly Infected": [np.mean, np.std]})
                 .pipe(droplevel_col_index)
                 .assign(upper=lambda df: df["mean"] + df["std"])
