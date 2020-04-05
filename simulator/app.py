@@ -296,25 +296,30 @@ def plot_EI(model_output, scale):
 def run_queue_model(model_output , cases_df, w_place, w_date, params_simulation):
 
         bar_text = st.empty()
-
         bar_text.text('Estimando crecscimento de infectados...')
+        simulations_outputs = []
 
         dataset, cut_after = calculate_input_hospital_queue(model_output , cases_df, w_place, w_date)
-        dataset = dataset[['day', 'newly_infected_mean']].copy()
-        dataset = dataset.assign(hospitalizados=round(dataset['newly_infected_mean']*0.14))
-
-        bar = st.progress(0)
         
-        bar_text.text('Processando filas...')
-        simulation_output = (run_queue_simulation(dataset, bar, bar_text, params_simulation)
-            .join(dataset, how='inner'))
+        for execution_columnm, execution_description in [('newly_infected_lower', 'otimista'),
+                                                         ('newly_infected_mean', 'médio'),
+                                                         ('newly_infected_upper', 'pessimista')]:
+            
+            dataset = dataset.assign(hospitalizados=round(dataset[execution_columnm]*0.14))
 
-        bar.progress(1.)
-        bar_text.text("Processamento finalizado.")
+            bar_text = st.empty()
+            bar = st.progress(0)
+            
+            bar_text.text(f'Processando do cenário {execution_description}...')
+            simulation_output = (run_queue_simulation(dataset, bar, bar_text, params_simulation)
+                .join(dataset, how='inner'))
 
-        st.markdown("### Resultados")
+            simulations_outputs.append((execution_columnm, simulation_output))
 
-        return simulation_output, cut_after
+            bar.progress(1.)
+            bar_text.text(f"Processamento do cenário {execution_description} finalizado.")
+
+        return simulations_outputs, cut_after
 
 def calculate_input_hospital_queue(model_output, cases_df, place, date):
 
@@ -510,34 +515,39 @@ if __name__ == '__main__':
         st.markdown(texts.HOSPITAL_QUEUE_SIMULATION)
 
         params_simulation = make_param_widgets_hospital_queue(w_place)
-        simulation_output, cut_after = run_queue_model(model_output , cases_df, w_place, w_date, params_simulation)
-        simulation_output.drop(simulation_output.index[:cut_after])
+        simulation_outputs, cut_after = run_queue_model(model_output , cases_df, w_place, w_date, params_simulation)
 
-        simulation_output = simulation_output.assign(is_breakdown=simulation_output["Queue"] >= 1,
-                                                     is_breakdown_icu=simulation_output["ICU_Queue"] >= 1)
+        st.markdown("### Resultados")
 
-        def get_breakdown_start(column):
-
-            breakdown_days = simulation_output[simulation_output[column]]
+        for _, simulation_output in simulation_outputs:
             
-            if (breakdown_days.size >= 1):
-                breakdown_date = breakdown_days.Data.iloc[0].strftime("%d/%m/%Y")
-                return breakdown_date
-            else:
-                return None
+            simulation_output.drop(simulation_output.index[:cut_after])
 
-        breakdown_date = get_breakdown_start('is_breakdown')
-        if breakdown_date:
-            st.markdown(f"Colapso dos leitos: **{breakdown_date}**")
-        
-        breakdown_date_icu = get_breakdown_start('is_breakdown_icu')
-        if breakdown_date_icu:
-            st.markdown(f"Colapso dos leitos (UTI): **{breakdown_date_icu}**")
+            simulation_output = simulation_output.assign(is_breakdown=simulation_output["Queue"] >= 1,
+                                                         is_breakdown_icu=simulation_output["ICU_Queue"] >= 1)
 
-        st.altair_chart(make_simulation_chart(simulation_output, "Occupied_beds", "Ocupação de leitos comuns"))
-        st.altair_chart(make_simulation_chart(simulation_output, "ICU_Occupied_beds", "Ocupação de leitos de UTI"))
-        st.altair_chart(make_simulation_chart(simulation_output, "Queue", "Fila de pacientes"))
-        st.altair_chart(make_simulation_chart(simulation_output, "ICU_Queue", "Fila de pacientes UTI"))
+            def get_breakdown_start(column):
+
+                breakdown_days = simulation_output[simulation_output[column]]
+                
+                if (breakdown_days.size >= 1):
+                    breakdown_date = breakdown_days.Data.iloc[0].strftime("%d/%m/%Y")
+                    return breakdown_date
+                else:
+                    return None
+
+            breakdown_date = get_breakdown_start('is_breakdown')
+            if breakdown_date:
+                st.markdown(f"Colapso dos leitos: **{breakdown_date}**")
+            
+            breakdown_date_icu = get_breakdown_start('is_breakdown_icu')
+            if breakdown_date_icu:
+                st.markdown(f"Colapso dos leitos (UTI): **{breakdown_date_icu}**")
+
+            st.altair_chart(make_simulation_chart(simulation_output, "Occupied_beds", "Ocupação de leitos comuns"))
+            st.altair_chart(make_simulation_chart(simulation_output, "ICU_Occupied_beds", "Ocupação de leitos de UTI"))
+            st.altair_chart(make_simulation_chart(simulation_output, "Queue", "Fila de pacientes"))
+            st.altair_chart(make_simulation_chart(simulation_output, "ICU_Queue", "Fila de pacientes UTI"))
 
         #TODO: change download method
         href = make_download_simulation_df(simulation_output, 'queue-simulator.3778.care.csv')
