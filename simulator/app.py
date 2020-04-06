@@ -538,11 +538,12 @@ if __name__ == '__main__':
                     get_breakdown_start('is_breakdown'), 
                     get_breakdown_start('is_breakdown_icu'))
 
-        st.markdown(pd.DataFrame(
-            data=[get_breakdown(description, simulation_output) for _, description, simulation_output in simulation_outputs],
-            columns=['Cenário', 'Leitos comuns', 'Leitos UTI'])
+        st.markdown((
+            pd.DataFrame(
+                data=[get_breakdown(description, simulation_output) for _, description, simulation_output in simulation_outputs],
+                columns=['Cenário', 'Leitos comuns', 'Leitos UTI'])
             .set_index('Cenário')
-            .to_markdown())
+            .to_markdown()))
 
         st.markdown("### Visualizações")
 
