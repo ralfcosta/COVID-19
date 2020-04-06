@@ -3,6 +3,7 @@ import streamlit as st
 import texts
 import base64
 import pandas as pd
+import pandas_profiling
 import numpy as np
 from covid19 import data
 from covid19.models import SEIRBayes
@@ -483,7 +484,6 @@ if __name__ == '__main__':
 
     download_placeholder = st.empty()
 
-    use_hospital_queue = st.sidebar.checkbox('Simular fila hospitalar')
     if download_placeholder.button('Preparar dados para download em CSV'):
         href = make_download_href(ei_df, w_params, should_estimate_r0)
         st.markdown(href, unsafe_allow_html=True)
@@ -495,8 +495,10 @@ if __name__ == '__main__':
     SEIR0 = model._params['init_conditions']
     st.markdown(texts.make_SIMULATION_PARAMS(SEIR0, dists,
                                              should_estimate_r0))
-    st.button('Simular novamente')
-    st.markdown(texts.SIMULATION_CONFIG)
+    
+    st.markdown(texts.HOSPITAL_QUEUE_SIMULATION)
+    use_hospital_queue = st.checkbox('Habilitar simulador de fila hospitalar')
+    #st.markdown(texts.SIMULATION_CONFIG)
 
     #Begining of the queue simulation
     def make_download_simulation_df(df, filename):
@@ -512,11 +514,11 @@ if __name__ == '__main__':
 
     if use_hospital_queue:
 
-        st.markdown(texts.HOSPITAL_QUEUE_SIMULATION)
 
         params_simulation = make_param_widgets_hospital_queue(w_place)
         simulation_outputs, cut_after = run_queue_model(model_output , cases_df, w_place, w_date, params_simulation)
 
+        st.markdown(texts.HOSPITAL_GRAPH_DESCRIPTION)
         st.markdown(texts.HOSPITAL_BREAKDOWN_DESCRIPTION)
 
         def get_breakdown(description, simulation_output):
