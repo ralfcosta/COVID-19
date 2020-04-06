@@ -3,7 +3,6 @@ import streamlit as st
 import texts
 import base64
 import pandas as pd
-import pandas_profiling
 import numpy as np
 from covid19 import data
 from covid19.models import SEIRBayes
@@ -157,6 +156,7 @@ def make_param_widgets_hospital_queue(city, defaults=DEFAULT_PARAMS):
     city, uf = city.split("/")
     qtd_beds, qtd_beds_uci = load_beds(data.get_ibge_code(city, uf))
 
+    st.sidebar.markdown('---')
     st.sidebar.markdown('#### Parâmetros da simulação hospitalar')
 
     los_covid = st.sidebar.number_input(
