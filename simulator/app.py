@@ -374,6 +374,7 @@ def calculate_input_hospital_queue(model_output, cases_df, place, date):
         .assign(newly_infected_mean=df['newly_infected_mean'].combine_first(df['newCases']))
         .assign(newly_infected_upper=df['newly_infected_upper'].combine_first(df['newCases']))
         .assign(newly_infected_lower=df['newly_infected_lower'].combine_first(df['newCases']))
+        .assign(newly_infected_lower=lambda df: df['newly_infected_lower'].clip(lower=0))
         .drop(columns=['newCases', 'newly_infected_std'])
         .reset_index()
         .rename(columns={'index':'day'}))
