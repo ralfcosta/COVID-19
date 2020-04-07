@@ -16,6 +16,7 @@ from formats import global_format_func
 from json import dumps
 from covid19.estimation import ReproductionNumber
 
+SAMPLE_SIZE=500
 MIN_CASES_TH = 10
 MIN_DAYS_r0_ESTIMATE = 14
 MIN_DATA_BRAZIL = '2020-03-26'
@@ -454,7 +455,6 @@ if __name__ == '__main__':
             'Qtde. de iterações da simulação (runs)',
             min_value=1, max_value=3_000, step=100,
             value=300)
-
     st.markdown(texts.r0_ESTIMATION_TITLE)
     should_estimate_r0 = st.checkbox(
             'Estimar R0 a partir de dados históricos',
@@ -462,7 +462,7 @@ if __name__ == '__main__':
     if should_estimate_r0:
         r0_samples, used_brazil = estimate_r0(cases_df,
                                               w_place,
-                                              sample_size, 
+                                              SAMPLE_SIZE, 
                                               MIN_DAYS_r0_ESTIMATE, 
                                               w_date)
         if used_brazil:
@@ -483,7 +483,7 @@ if __name__ == '__main__':
 
     w_params = make_param_widgets(NEIR0)
     model = SEIRBayes(**w_params, r0_dist=r0_dist)
-#     w_params = make_param_widgets(NEIR0, r0_samples)
+    # w_params = make_param_widgets(NEIR0, r0_samples)
     model_output = model.sample(sample_size)
     ei_df = make_EI_df(model_output, sample_size, w_date)
     st.markdown(texts.MODEL_INTRO)
