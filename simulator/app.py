@@ -234,7 +234,7 @@ def make_NEIR0(cases_df, population_df, place, date):
     R0 = 0
     return (N0, E0, I0, R0)
 
-def make_download_href(df, params, should_estimate_r0):
+def make_download_href(df, params, should_estimate_r0, r0_dist):
     _params = {
         'subnotification_factor': params['fator_subr'],
         'incubation_period': {
@@ -250,13 +250,13 @@ def make_download_href(df, params, should_estimate_r0):
     }
     if should_estimate_r0:
         _params['reproduction_number'] = {
-            'samples': list(params['r0_dist'])
+            'samples': list(r0_dist)
         }
     else:
         _params['reproduction_number'] = {
-            'lower_bound': params['r0_dist'][0],
-            'upper_bound': params['r0_dist'][1],
-            'density_between_bounds': params['r0_dist'][2]
+            'lower_bound': r0_dist[0],
+            'upper_bound': r0_dist[1],
+            'density_between_bounds': r0_dist[2]
         }
     csv = df.to_csv(index=False)
     b64_csv = base64.b64encode(csv.encode()).decode()
@@ -278,13 +278,24 @@ def make_download_href(df, params, should_estimate_r0):
 #        href="data:file/csv;base64,{b64}">
 #        Clique para baixar ({size:.02} MB)
 
-def make_EI_df(model_output, sample_size):
-    _, E, I, _, t = model_output
+def make_EI_df(model_output, sample_size, date):
+    _, E, I, R, t = model_output
     size = sample_size*model.params['t_max']
-    return (pd.DataFrame({'Exposed': E.reshape(size),
-                          'Infected': I.reshape(size),
-                          'run': np.arange(size) % sample_size})
-              .assign(day=lambda df: (df['run'] == 0).cumsum() - 1))
+
+    NI = np.add(pd.DataFrame(I).apply(lambda x: x - x.shift(1)).values,
+                pd.DataFrame(R).apply(lambda x: x - x.shift(1)).values)
+
+    df = (pd.DataFrame({'Exposed': E.reshape(size),
+                        'Infected': I.reshape(size),
+                        'Recovered': R.reshape(size),
+                        'Newly Infected': NI.reshape(size),
+                        'Run': np.arange(size) % sample_size}
+                        )
+              .assign(Day=lambda df: (df['Run'] == 0).cumsum() - 1))
+
+    return df.assign(
+        Date=df['Day']
+            .apply(lambda x: pd.to_datetime(date) + timedelta(days=(x))))
 
 def plot_EI(model_output, scale):
     _, E, I, _, t = model_output
@@ -363,6 +374,7 @@ def calculate_input_hospital_queue(model_output, cases_df, place, date):
         .assign(newly_infected_mean=df['newly_infected_mean'].combine_first(df['newCases']))
         .assign(newly_infected_upper=df['newly_infected_upper'].combine_first(df['newCases']))
         .assign(newly_infected_lower=df['newly_infected_lower'].combine_first(df['newCases']))
+        .assign(newly_infected_lower=lambda df: df['newly_infected_lower'].clip(lower=0))
         .drop(columns=['newCases', 'newly_infected_std'])
         .reset_index()
         .rename(columns={'index':'day'}))
@@ -473,7 +485,7 @@ if __name__ == '__main__':
     model = SEIRBayes(**w_params, r0_dist=r0_dist)
 #     w_params = make_param_widgets(NEIR0, r0_samples)
     model_output = model.sample(sample_size)
-    ei_df = make_EI_df(model_output, sample_size)
+    ei_df = make_EI_df(model_output, sample_size, w_date)
     st.markdown(texts.MODEL_INTRO)
     st.write(texts.SEIRBAYES_DESC)
     w_scale = st.selectbox('Escala do eixo Y',
@@ -485,7 +497,7 @@ if __name__ == '__main__':
     download_placeholder = st.empty()
 
     if download_placeholder.button('Preparar dados para download em CSV'):
-        href = make_download_href(ei_df, w_params, should_estimate_r0)
+        href = make_download_href(ei_df, w_params, should_estimate_r0, r0_dist)
         st.markdown(href, unsafe_allow_html=True)
         download_placeholder.empty()
 
