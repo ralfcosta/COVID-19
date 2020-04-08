@@ -127,8 +127,13 @@ def run_queue_simulation(data,bar, bar_text, params={}):
         icu_after_bed = params["icu_after_bed"]
 
         icu_death_rate = params["icu_death_rate"]  ### Adicionar nos Parâmetros
+<<<<<<< HEAD
         icu_queue_death_rate = params["icu_queue_death_rate"]  ### Adicionar nos Parâmetros
         queue_death_rate = params["queue_death_rate"]
+=======
+        # icu_queue_death_rate = params["icu_queue_death_rate"]  ### Adicionar nos Parâmetros
+        queue_death_rate = params
+>>>>>>> d74d3095ad4265cd7966096243f0c140031eb239
 
         beds = int(total_beds * available_rate)  # beds available
         # beds = int(total_beds)  # beds available
@@ -545,7 +550,10 @@ def run_queue_simulation(data,bar, bar_text, params={}):
                           which to stop simulation
             """
 
-            while self.env.now < g.sim_duration:
+            while True:
+
+                if  self.env.now > g.sim_duration - 2:
+                    break
 
                 # Bed and ICU saturation condition
                 if self.hospital.queue_icu_count > 1 and \
