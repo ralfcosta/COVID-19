@@ -4,6 +4,7 @@ import texts
 import base64
 import pandas as pd
 import numpy as np
+import math               #### add to requirements
 from covid19 import data
 from covid19.models import SEIRBayes
 from hospital_queue.queue_simulation import run_queue_simulation
@@ -16,23 +17,29 @@ from formats import global_format_func
 from json import dumps
 from covid19.estimation import ReproductionNumber
 
+FATAL_RATE_BASELINE = 0.0138 #Verity R, Okell LC, Dorigatti I et al. Estimates of the severity of covid-19 disease. medRxiv 2020.
 MIN_CASES_TH = 10
 MIN_DAYS_r0_ESTIMATE = 14
+MIN_DEATH_SUBN = 3
 MIN_DATA_BRAZIL = '2020-03-26'
 DEFAULT_CITY = 'São Paulo/SP'
 DEFAULT_STATE = 'SP'
 DEFAULT_PARAMS = {
-    'fator_subr': 1.0,
+    'fator_subr': 10,
     'gamma_inv_dist': (7.0, 14.0, 0.95, 'lognorm'),
     'alpha_inv_dist': (4.1, 7.0, 0.95, 'lognorm'),
     'r0_dist': (2.5, 6.0, 0.95, 'lognorm'),
 
     #Simulations params
+    'confirm_admin_rate': .14,
     'length_of_stay_covid': 10,
     'length_of_stay_covid_uti': 8,
     'icu_rate': .1,
     'icu_rate_after_bed': .08,
-    'icu_death_rate': .1,
+
+    'icu_death_rate': .78,
+    'icu_queue_death_rate': .1,
+    'queue_death_rate': .1
 
     'total_beds': 12222,
     'total_beds_icu': 2421,
@@ -81,16 +88,15 @@ def make_date_options(cases_df, place):
             .index
             .strftime('%Y-%m-%d'))
 
-def make_param_widgets(NEIR0, r0_samples=None, defaults=DEFAULT_PARAMS):
+def make_param_widgets(NEIR0, r0_samples=None, defaults=DEFAULT_PARAMS,subr = 10):
     _N0, _E0, _I0, _R0 = map(int, NEIR0)
     interval_density = 0.95
     family = 'lognorm'
 
     fator_subr = st.sidebar.number_input(
-            ('Fator de subnotificação. Este número irá multiplicar'
-             'o número de infectados e expostos.'),
-            min_value=1.0, max_value=200.0, step=1.0,
-            value=defaults['fator_subr'])
+            ('Taxa de reportagem de infectados. Porcentagem dos infectados que testaram positivo'),
+            min_value=0, max_value=100.0, step=1.0,
+            value=subr)
 
     st.sidebar.markdown('#### Condições iniciais')
     N = st.sidebar.number_input('População total (N)',
@@ -143,7 +149,7 @@ def make_param_widgets(NEIR0, r0_samples=None, defaults=DEFAULT_PARAMS):
             't_max': t_max,
             'NEIR0': (N, E0, I0, R0)}
 
-def make_param_widgets_hospital_queue(city, defaults=DEFAULT_PARAMS):
+def make_param_widgets_hospital_queue(city, defaults=DEFAULT_PARAMS, cCFR):
      
     def load_beds(ibge_code):
         # leitos
@@ -156,7 +162,16 @@ def make_param_widgets_hospital_queue(city, defaults=DEFAULT_PARAMS):
     city, uf = city.split("/")
     qtd_beds, qtd_beds_uci = load_beds(data.get_ibge_code(city, uf))
 
+    admiss_rate = FATAL_RATE_BASELINE/cCFR
+
     st.sidebar.markdown('#### Parâmetros da simulação hospitalar')
+
+    confirm_admin_rate = st.sidebar.number_input(
+            'Porcentagem de confirmados que são hospitalizados (%)',
+             step=1,
+             min_value=0,
+             max_value=100,
+             value=admiss_rate)
 
     los_covid = st.sidebar.number_input(
             'Tempo de estadia médio no leito comum (dias)',
@@ -178,6 +193,27 @@ def make_param_widgets_hospital_queue(city, defaults=DEFAULT_PARAMS):
              min_value=.0,
              max_value=1.,
              value=DEFAULT_PARAMS['icu_rate'])
+
+    icu_death_rate = st.sidebar.number_input(
+             'Taxa de mortes após estadia na UTI',
+             step=.01,
+             min_value=.0,
+             max_value=1.,
+             value=DEFAULT_PARAMS['icu_death_rate'])
+
+    icu_queue_death_rate = st.sidebar.number_input(
+             'Taxa de mortes na fila da UTI',
+             step=.01,
+             min_value=.0,
+             max_value=1.,
+             value=DEFAULT_PARAMS['icu_queue_death_rate'])
+
+    queue_death_rate = st.sidebar.number_input(
+             'Taxa de mortes na fila dos leitos normais',
+             step=.01,
+             min_value=.0,
+             max_value=1.,
+             value=DEFAULT_PARAMS['queue_death_rate'])
 
     icu_after_bed = st.sidebar.number_input(
              'Taxa de pacientes encaminhados para UTI a partir dos leitos',
@@ -214,16 +250,21 @@ def make_param_widgets_hospital_queue(city, defaults=DEFAULT_PARAMS):
              max_value=1.,
              value=DEFAULT_PARAMS['available_rate_icu'])
     
-    return {"los_covid": los_covid,
+    return {"confirm_admin_rate": confirm_admin_rate,
+            "los_covid": los_covid,
             "los_covid_icu": los_covid_icu,
             "icu_rate": icu_rate,
+
+            "icu_death_rate": icu_death_rate,
+            "icu_queue_death_rate": icu_queue_death_rate,
+            "queue_death_rate": queue_death_rate,
+            
             "icu_after_bed": icu_after_bed,
             "total_beds": total_beds,
             "total_beds_icu": total_beds_icu,
             "available_rate": available_rate,
-            "available_rate_icu": available_rate_icu,
-            # TODO: add on front-end
-            "icu_death_rate": DEFAULT_PARAMS['icu_death_rate']}
+            "available_rate_icu": available_rate_icu
+            }
 
 @st.cache
 def make_NEIR0(cases_df, population_df, place, date):
@@ -305,7 +346,7 @@ def run_queue_model(model_output , cases_df, w_place, w_date, params_simulation)
                                                          ('newly_infected_mean', 'Médio'),
                                                          ('newly_infected_upper', 'Pessimista')]:
             
-            dataset = dataset.assign(hospitalizados=round(dataset[execution_columnm]*0.14))
+            dataset = dataset.assign(hospitalizados=round(dataset[execution_columnm]*params_simulation['confirm_admin_rate']*reported_rate))
 
             bar_text = st.empty()
             bar = st.progress(0)
@@ -407,6 +448,130 @@ def make_r0_widgets(defaults=DEFAULT_PARAMS):
             value=defaults['r0_dist'][1])
     return (r0_inf, r0_sup, .95, 'lognorm')
 
+def estimate_subnotification(cases_df, place, date,w_granularity):
+
+    if w_granularity == 'city':
+        city_deaths, city_cases = get_city_deaths(place)
+        state = city_cases['state'][0]
+        if city_deaths < MIN_DEATH_SUBN:
+            place = state
+            w_granularity = 'state'
+
+    if w_granularity == 'state':
+        state_deaths, state_cases = get_state_cases_and_deaths(place)
+        if state_deaths < MIN_DEATH_SUBN:
+            w_granularity = 'brazil'
+
+    if w_granularity == 'city':
+
+        previous_cases = cases_df[place][:date]
+        # Formatting previous dates
+        all_dates = pd.date_range(start=MIN_DATA_BRAZIL, end=date).strftime('%Y-%m-%d')
+
+        all_dates_df = pd.DataFrame(index=all_dates,
+                                    data={"dummy": np.zeros(len(all_dates))})
+
+        previous_cases = all_dates_df.join(previous_cases, how='outer')['newCases']
+        #cut_after = previous_cases.shape[0]
+
+        previous_cases = previous_cases.fillna(0)
+        previous_cases = pd.DataFrame(previous_cases, columns=['newCases'])
+        deaths,cases_df = get_city_deaths(place)
+
+        previous_cases['deaths'] = 0
+        previous_cases['deaths'][0] = deaths
+        previous_cases = previous_cases.sort_index(ascending=False)
+        print(deaths)
+        #if w_granularity == 'state':
+
+        # if len(incidence) < MIN_DAYS_r0_ESTIMATE:
+        #     used_brazil = True
+        #     incidence = (
+        #         make_brazil_cases(cases_df)
+        #             .pipe(prepare_for_r0_estimation)
+        #         [:w_date]
+        #     )
+        return subnotification(previous_cases)
+
+    if w_granularity == 'state':
+
+        state_deaths, cases_df = get_state_cases_and_deaths(place)
+        previous_cases = cases_df.sort_index(ascending=False)
+        previous_cases = previous_cases.reset_index()
+        total_deaths = previous_cases['deaths'][0]
+        previous_cases['deaths'] = 0
+        previous_cases['deaths'][0] = total_deaths
+
+        return subnotification(previous_cases)
+
+    if w_granularity == 'brazil':
+
+        brazil_deaths, cases_df = get_brazil_cases_and_deaths()
+        print(brazil_deaths)
+        previous_cases = cases_df.sort_index(ascending=False)
+        previous_cases = previous_cases.reset_index()
+        total_deaths = previous_cases['deaths'][0]
+        print(total_deaths)
+        previous_cases['deaths'] = 0
+        previous_cases['deaths'][0] = total_deaths
+
+        return subnotification(previous_cases)
+
+def uf(sd,mean):
+    u = math.log((math.pow(mean,2))/(math.sqrt(math.pow(sd,2)+math.pow(mean,2))))
+    return u
+
+def sf(sd,mean):
+    s = math.sqrt(math.log(1+(math.pow(sd/mean,2))))
+    return s
+
+def death_distrib_integral(x,u,s):
+    fx = (-1/2)*math.erf((u-math.log(x))/(s*(math.sqrt(2))))
+    return fx
+
+
+def day_death_prob(day,mean,sd):
+    init = day
+    final = day+1
+    if init == 0:
+        init = 0.001
+    u = uf(sd, mean)
+    s = sf(sd,mean)
+    prob = death_distrib_integral(final,u,s)-death_distrib_integral(init,u,s)
+    return prob
+
+def cCFR(cases):
+
+    mean = 13  # Linton NM, Kobayashi T, Yang Y et al. Incubation period and other
+    sd = 12.7  # epidemiological characteristics of 2019 novel coronavirus infections
+    # with right truncation: A statistical analysis of publicly available case data.
+    # Journal of Clinical Medicine 2020;9:538.
+
+    estim_deaths = 0
+    cases_confirm = 0
+    deaths_confirm = 0
+
+    for i in range(cases.shape[0]):
+        cases_confirm += cases['newCases'].iloc[i]
+        deaths_confirm += cases['deaths'].iloc[i]
+        for j in range(cases.shape[0] - i + 1):
+            estim_deaths += cases['newCases'].iloc[i + j - 1] * day_death_prob(j, mean, sd)
+
+    print(deaths_confirm)
+    print(cases_confirm)
+
+    u = estim_deaths / cases_confirm
+    cCFR = deaths_confirm / (cases_confirm * u)
+
+    return cCFR
+
+def subnotification(cases):
+
+    cCFR_place = cCFR(cases)
+    subnotification_rate = FATAL_RATE_BASELINE/cCFR_place
+
+    return subnotification_rate
+
 
 if __name__ == '__main__':
     st.markdown(texts.INTRODUCTION)
@@ -433,6 +598,9 @@ if __name__ == '__main__':
     w_date = st.sidebar.selectbox('Data',
                                   options=options_date,
                                   index=len(options_date)-1)
+
+    reported_rate,cCFR = estimate_subnotification(cases_df, place, date,w_granularity)
+
     NEIR0 = make_NEIR0(cases_df, population_df, w_place, w_date)
     # w_show_uncertainty = st.checkbox('Mostrar intervalo de confiança', 
     #                                  value=True)
@@ -468,7 +636,7 @@ if __name__ == '__main__':
         r0_dist = make_r0_widgets()
         st.markdown(texts.r0_ESTIMATION_DONT)
 
-    w_params = make_param_widgets(NEIR0)
+    w_params = make_param_widgets(NEIR0,reported_rate*100)
     model = SEIRBayes(**w_params, r0_dist=r0_dist)
 #     w_params = make_param_widgets(NEIR0, r0_samples)
     model_output = model.sample(sample_size)
@@ -515,7 +683,7 @@ if __name__ == '__main__':
         st.markdown(texts.HOSPITAL_QUEUE_SIMULATION)
 
         params_simulation = make_param_widgets_hospital_queue(w_place)
-        simulation_outputs, cut_after = run_queue_model(model_output , cases_df, w_place, w_date, params_simulation)
+        simulation_outputs, cut_after = run_queue_model(model_output , cases_df, w_place, w_date, params_simulation,reported_rate)
 
         st.markdown(texts.HOSPITAL_BREAKDOWN_DESCRIPTION)
 
