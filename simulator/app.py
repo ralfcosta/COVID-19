@@ -355,8 +355,12 @@ def run_queue_model(model_output , cases_df, w_place, w_date, params_simulation)
                                                          ('newly_infected_mean', 'Médio'),
                                                          ('newly_infected_upper', 'Pessimista')]:
             
-            #TODO: review order of magnitude of all parameters (make sure it is consistant)
-            dataset = dataset.assign(hospitalizados=round(dataset[execution_columnm]*params_simulation['confirm_admin_rate']*reported_rate/100))
+
+            #BUG:review order of magnitude of all parameters (make sure it is consistant)
+            dataset = dataset.assign(hospitalizados=round(dataset[execution_columnm]*params_simulation['confirm_admin_rate']*reported_rate/1000))
+
+            st.write("input modelo")
+            st.write(dataset.tail())
 
             bar_text = st.empty()
             bar = st.progress(0)
@@ -554,7 +558,6 @@ def calculateCCFR(cases):
     for i in range(cases.shape[0]):
         cases_confirm += cases['newCases'].iloc[i]
         deaths_confirm += cases['deaths'].iloc[i]
-        print(deaths_confirm)
         for j in range(cases.shape[0] - i + 1):
             estim_deaths += cases['newCases'].iloc[i + j - 1] * day_death_prob(j, mean, sd)
 
@@ -677,11 +680,10 @@ if __name__ == '__main__':
     if use_hospital_queue:
 
         params_simulation = make_param_widgets_hospital_queue(w_place)
-        print(model_output)
         st.write(cases_df.head())
-        st.write(w_place.head())
-        st.write(w_date.head())
-        st.write(params_simulation.head())
+        st.write(w_place)
+        st.write(w_date)
+        st.write(params_simulation)
         simulation_outputs, cut_after = run_queue_model(model_output , cases_df, w_place, w_date, params_simulation)
 
         st.markdown(texts.HOSPITAL_GRAPH_DESCRIPTION)
