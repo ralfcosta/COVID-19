@@ -164,7 +164,7 @@ def make_simulation_chart(simulation_output, metric, title):
                 .configure_title(fontSize=16)
                 .configure_axis(labelFontSize=12, titleFontSize=12)
                 .configure_legend(labelFontSize=14, titleFontSize=14))
-    # axis = alt.Axis(format = ("%e/%m"))
+                
 def plot_r0(r0_samples, date, place, min_days):
     r0_samples_cut = r0_samples[-min_days:]
     columns = pd.date_range(end=date, periods=r0_samples_cut.shape[1])

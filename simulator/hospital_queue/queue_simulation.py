@@ -17,8 +17,6 @@ from oauth2client.service_account import ServiceAccountCredentials
 import numpy as np
 from datetime import datetime
 
-
-
 def run_queue_simulation(data,bar, bar_text, params={}):
     covid_data = data
     # In[3]:
@@ -127,13 +125,8 @@ def run_queue_simulation(data,bar, bar_text, params={}):
         icu_after_bed = params["icu_after_bed"]
 
         icu_death_rate = params["icu_death_rate"]  ### Adicionar nos Parâmetros
-<<<<<<< HEAD
         icu_queue_death_rate = params["icu_queue_death_rate"]  ### Adicionar nos Parâmetros
         queue_death_rate = params["queue_death_rate"]
-=======
-        # icu_queue_death_rate = params["icu_queue_death_rate"]  ### Adicionar nos Parâmetros
-        queue_death_rate = params
->>>>>>> d74d3095ad4265cd7966096243f0c140031eb239
 
         beds = int(total_beds * available_rate)  # beds available
         # beds = int(total_beds)  # beds available
@@ -1113,21 +1106,6 @@ def run_queue_simulation(data,bar, bar_text, params={}):
             self.icu_beds = simpy.PriorityResource(env, capacity=number_of_icu_beds)
 
             return
-
-        # # In[25]:
-        # def main():
-        #     """
-        #     Code entry point after: if __name__ == '__main__'
-        #     Creates model object, and runs model
-        #     """
-        #     #covid_data =
-        #     print("IT WORKS")
-        #     model = Model()
-        #     model.run()
-
-        #     return
-
-        # In[26]:
 
     seed(98989)
     model = Model()

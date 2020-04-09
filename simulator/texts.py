@@ -60,7 +60,7 @@ HOSPITAL_QUEUE_SIMULATION= '''
 
 ## Simulação de fila hospitalar
 
-**(!) Importante**: a simulação do modelo de fila, pode levar alguns minutos.
+A simulação do modelo de fila, pode levar alguns minutos.
 
 '''
 
@@ -73,8 +73,10 @@ Os resultados abaixo apresentam a evolução do sistema de saúde do município 
 HOSPITAL_GRAPH_DESCRIPTION= '''
 ### Previsão de Colapso:
 
-**(!) Importante: Os resultados apresentados são preliminares e estão em fase de validação.
-O eixo do tempo do modelo abaixo considera que 0 é o dia em que foram observadas as condições iniciais inseridas no menu à esquerda. É possível selecionar o estado ou município, além da data, desejado. Neste caso, o dia 0 será a data escolhida.
+**(!) Importante**: Os resultados apresentados são preliminares e estão em fase de validação.
+
+São definidas as condições listadas no menu à esquera para o dia 0.
+Unidade, data e demais parâmetros podem ser ajustados conforme desejado.
 O sistema é considerado colapsado quando há formação de filas, consequente da lotação dos leitos.
 '''
 
@@ -90,9 +92,11 @@ Os colapsos foram estimados para três cenários executados com base nos resulta
 '''
 
 DATA_SOURCES = '''
+---
 ### Fontes dos dados
 
-* Casos confirmados: [Número de casos confirmados de COVID-19 no Brasil](https://raw.githubusercontent.com/wcota/covid19br/master/cases-brazil-cities-time.csv) (de https://github.com/wcota/covid19br)
+* Casos confirmados por município: [Número de casos confirmados de COVID-19 no Brasil](https://raw.githubusercontent.com/wcota/covid19br/master/cases-brazil-cities-time.csv) (de https://github.com/wcota/covid19br)
+* Casos confirmados por estado: [Painel de casos de doença pelo coronavírus 2019 (COVID-19) no Brasil pelo Ministério da Saúde](https://covid.saude.gov.br/)
 * População: Estimativa IBGE de 01/07/2019 (disponível em: [IBGE - Estimativas da população](https://www.ibge.gov.br/estatisticas/sociais/populacao/9103-estimativas-de-populacao.html))
 '''
 

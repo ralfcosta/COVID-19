@@ -18,6 +18,7 @@ from json import dumps
 from covid19.estimation import ReproductionNumber
 
 FATAL_RATE_BASELINE = 0.0138 #Verity R, Okell LC, Dorigatti I et al. Estimates of the severity of covid-19 disease. medRxiv 2020.
+SAMPLE_SIZE=500
 MIN_CASES_TH = 10
 MIN_DAYS_r0_ESTIMATE = 14
 MIN_DEATH_SUBN = 3
@@ -39,7 +40,7 @@ DEFAULT_PARAMS = {
 
     'icu_death_rate': .78,
     'icu_queue_death_rate': .1,
-    'queue_death_rate': .1
+    'queue_death_rate': .1,
 
     'total_beds': 12222,
     'total_beds_icu': 2421,
@@ -88,15 +89,15 @@ def make_date_options(cases_df, place):
             .index
             .strftime('%Y-%m-%d'))
 
-def make_param_widgets(NEIR0, r0_samples=None, defaults=DEFAULT_PARAMS,subr = 10):
+def make_param_widgets(NEIR0, reported_rate, r0_samples=None, defaults=DEFAULT_PARAMS):
     _N0, _E0, _I0, _R0 = map(int, NEIR0)
     interval_density = 0.95
     family = 'lognorm'
 
     fator_subr = st.sidebar.number_input(
             ('Taxa de reportagem de infectados. Porcentagem dos infectados que testaram positivo'),
-            min_value=0, max_value=100.0, step=1.0,
-            value=subr)
+            min_value=0.0, max_value=100.0, step=1.0,
+            value=reported_rate)
 
     st.sidebar.markdown('#### Condições iniciais')
     N = st.sidebar.number_input('População total (N)',
@@ -149,7 +150,7 @@ def make_param_widgets(NEIR0, r0_samples=None, defaults=DEFAULT_PARAMS,subr = 10
             't_max': t_max,
             'NEIR0': (N, E0, I0, R0)}
 
-def make_param_widgets_hospital_queue(city, defaults=DEFAULT_PARAMS, cCFR):
+def make_param_widgets_hospital_queue(city, defaults=DEFAULT_PARAMS):
      
     def load_beds(ibge_code):
         # leitos
@@ -162,16 +163,18 @@ def make_param_widgets_hospital_queue(city, defaults=DEFAULT_PARAMS, cCFR):
     city, uf = city.split("/")
     qtd_beds, qtd_beds_uci = load_beds(data.get_ibge_code(city, uf))
 
-    admiss_rate = FATAL_RATE_BASELINE/cCFR
+    #TODO: Adjust reliable cCFR
+    #admiss_rate = FATAL_RATE_BASELINE/cCFR
 
+    st.sidebar.markdown('---')
     st.sidebar.markdown('#### Parâmetros da simulação hospitalar')
 
     confirm_admin_rate = st.sidebar.number_input(
             'Porcentagem de confirmados que são hospitalizados (%)',
-             step=1,
-             min_value=0,
-             max_value=100,
-             value=admiss_rate)
+             step=1.0,
+             min_value=0.0,
+             max_value=100.0,
+             value=DEFAULT_PARAMS['confirm_admin_rate']*100)
 
     los_covid = st.sidebar.number_input(
             'Tempo de estadia médio no leito comum (dias)',
@@ -274,7 +277,7 @@ def make_NEIR0(cases_df, population_df, place, date):
     R0 = 0
     return (N0, E0, I0, R0)
 
-def make_download_href(df, params, should_estimate_r0):
+def make_download_href(df, params, should_estimate_r0, r0_dist):
     _params = {
         'subnotification_factor': params['fator_subr'],
         'incubation_period': {
@@ -290,13 +293,13 @@ def make_download_href(df, params, should_estimate_r0):
     }
     if should_estimate_r0:
         _params['reproduction_number'] = {
-            'samples': list(params['r0_dist'])
+            'samples': list(r0_dist)
         }
     else:
         _params['reproduction_number'] = {
-            'lower_bound': params['r0_dist'][0],
-            'upper_bound': params['r0_dist'][1],
-            'density_between_bounds': params['r0_dist'][2]
+            'lower_bound': r0_dist[0],
+            'upper_bound': r0_dist[1],
+            'density_between_bounds': r0_dist[2]
         }
     csv = df.to_csv(index=False)
     b64_csv = base64.b64encode(csv.encode()).decode()
@@ -312,19 +315,25 @@ def make_download_href(df, params, should_estimate_r0):
        Clique para baixar os parâmetros utilizados em formato JSON.
     </a>
     """
-    
-#TODO: method for file download
-#     <a download='{filename}'
-#        href="data:file/csv;base64,{b64}">
-#        Clique para baixar ({size:.02} MB)
 
-def make_EI_df(model_output, sample_size):
-    _, E, I, _, t = model_output
+def make_EI_df(model_output, sample_size, date):
+    _, E, I, R, t = model_output
     size = sample_size*model.params['t_max']
-    return (pd.DataFrame({'Exposed': E.reshape(size),
-                          'Infected': I.reshape(size),
-                          'run': np.arange(size) % sample_size})
-              .assign(day=lambda df: (df['run'] == 0).cumsum() - 1))
+
+    NI = np.add(pd.DataFrame(I).apply(lambda x: x - x.shift(1)).values,
+                pd.DataFrame(R).apply(lambda x: x - x.shift(1)).values)
+
+    df = (pd.DataFrame({'Exposed': E.reshape(size),
+                        'Infected': I.reshape(size),
+                        'Recovered': R.reshape(size),
+                        'Newly Infected': NI.reshape(size),
+                        'Run': np.arange(size) % sample_size}
+                        )
+              .assign(Day=lambda df: (df['Run'] == 0).cumsum() - 1))
+
+    return df.assign(
+        Date=df['Day']
+            .apply(lambda x: pd.to_datetime(date) + timedelta(days=(x))))
 
 def plot_EI(model_output, scale):
     _, E, I, _, t = model_output
@@ -346,7 +355,8 @@ def run_queue_model(model_output , cases_df, w_place, w_date, params_simulation)
                                                          ('newly_infected_mean', 'Médio'),
                                                          ('newly_infected_upper', 'Pessimista')]:
             
-            dataset = dataset.assign(hospitalizados=round(dataset[execution_columnm]*params_simulation['confirm_admin_rate']*reported_rate))
+            #TODO: review order of magnitude of all parameters (make sure it is consistant)
+            dataset = dataset.assign(hospitalizados=round(dataset[execution_columnm]*params_simulation['confirm_admin_rate']*reported_rate/100))
 
             bar_text = st.empty()
             bar = st.progress(0)
@@ -403,6 +413,7 @@ def calculate_input_hospital_queue(model_output, cases_df, place, date):
         .assign(newly_infected_mean=df['newly_infected_mean'].combine_first(df['newCases']))
         .assign(newly_infected_upper=df['newly_infected_upper'].combine_first(df['newCases']))
         .assign(newly_infected_lower=df['newly_infected_lower'].combine_first(df['newCases']))
+        .assign(newly_infected_lower=lambda df: df['newly_infected_lower'].clip(lower=0))
         .drop(columns=['newCases', 'newly_infected_std'])
         .reset_index()
         .rename(columns={'index':'day'}))
@@ -451,14 +462,14 @@ def make_r0_widgets(defaults=DEFAULT_PARAMS):
 def estimate_subnotification(cases_df, place, date,w_granularity):
 
     if w_granularity == 'city':
-        city_deaths, city_cases = get_city_deaths(place)
+        city_deaths, city_cases = data.get_city_deaths(place)
         state = city_cases['state'][0]
         if city_deaths < MIN_DEATH_SUBN:
             place = state
             w_granularity = 'state'
 
     if w_granularity == 'state':
-        state_deaths, state_cases = get_state_cases_and_deaths(place)
+        state_deaths, state_cases = data.get_state_cases_and_deaths(place)
         if state_deaths < MIN_DEATH_SUBN:
             w_granularity = 'brazil'
 
@@ -476,26 +487,17 @@ def estimate_subnotification(cases_df, place, date,w_granularity):
 
         previous_cases = previous_cases.fillna(0)
         previous_cases = pd.DataFrame(previous_cases, columns=['newCases'])
-        deaths,cases_df = get_city_deaths(place)
+        deaths,cases_df = data.get_city_deaths(place)
 
         previous_cases['deaths'] = 0
         previous_cases['deaths'][0] = deaths
         previous_cases = previous_cases.sort_index(ascending=False)
-        print(deaths)
-        #if w_granularity == 'state':
 
-        # if len(incidence) < MIN_DAYS_r0_ESTIMATE:
-        #     used_brazil = True
-        #     incidence = (
-        #         make_brazil_cases(cases_df)
-        #             .pipe(prepare_for_r0_estimation)
-        #         [:w_date]
-        #     )
         return subnotification(previous_cases)
 
     if w_granularity == 'state':
 
-        state_deaths, cases_df = get_state_cases_and_deaths(place)
+        state_deaths, cases_df = data.get_state_cases_and_deaths(place)
         previous_cases = cases_df.sort_index(ascending=False)
         previous_cases = previous_cases.reset_index()
         total_deaths = previous_cases['deaths'][0]
@@ -506,12 +508,10 @@ def estimate_subnotification(cases_df, place, date,w_granularity):
 
     if w_granularity == 'brazil':
 
-        brazil_deaths, cases_df = get_brazil_cases_and_deaths()
-        print(brazil_deaths)
+        brazil_deaths, cases_df = data.get_brazil_cases_and_deaths()
         previous_cases = cases_df.sort_index(ascending=False)
         previous_cases = previous_cases.reset_index()
         total_deaths = previous_cases['deaths'][0]
-        print(total_deaths)
         previous_cases['deaths'] = 0
         previous_cases['deaths'][0] = total_deaths
 
@@ -540,7 +540,7 @@ def day_death_prob(day,mean,sd):
     prob = death_distrib_integral(final,u,s)-death_distrib_integral(init,u,s)
     return prob
 
-def cCFR(cases):
+def calculateCCFR(cases):
 
     mean = 13  # Linton NM, Kobayashi T, Yang Y et al. Incubation period and other
     sd = 12.7  # epidemiological characteristics of 2019 novel coronavirus infections
@@ -554,11 +554,9 @@ def cCFR(cases):
     for i in range(cases.shape[0]):
         cases_confirm += cases['newCases'].iloc[i]
         deaths_confirm += cases['deaths'].iloc[i]
+        print(deaths_confirm)
         for j in range(cases.shape[0] - i + 1):
             estim_deaths += cases['newCases'].iloc[i + j - 1] * day_death_prob(j, mean, sd)
-
-    print(deaths_confirm)
-    print(cases_confirm)
 
     u = estim_deaths / cases_confirm
     cCFR = deaths_confirm / (cases_confirm * u)
@@ -567,11 +565,9 @@ def cCFR(cases):
 
 def subnotification(cases):
 
-    cCFR_place = cCFR(cases)
+    cCFR_place = calculateCCFR(cases)
     subnotification_rate = FATAL_RATE_BASELINE/cCFR_place
-
-    return subnotification_rate
-
+    return subnotification_rate, cCFR_place
 
 if __name__ == '__main__':
     st.markdown(texts.INTRODUCTION)
@@ -599,8 +595,7 @@ if __name__ == '__main__':
                                   options=options_date,
                                   index=len(options_date)-1)
 
-    reported_rate,cCFR = estimate_subnotification(cases_df, place, date,w_granularity)
-
+    reported_rate,cCFR = estimate_subnotification(cases_df, w_place, w_date, w_granularity)
     NEIR0 = make_NEIR0(cases_df, population_df, w_place, w_date)
     # w_show_uncertainty = st.checkbox('Mostrar intervalo de confiança', 
     #                                  value=True)
@@ -609,7 +604,6 @@ if __name__ == '__main__':
             'Qtde. de iterações da simulação (runs)',
             min_value=1, max_value=3_000, step=100,
             value=300)
-
     st.markdown(texts.r0_ESTIMATION_TITLE)
     should_estimate_r0 = st.checkbox(
             'Estimar R0 a partir de dados históricos',
@@ -617,7 +611,7 @@ if __name__ == '__main__':
     if should_estimate_r0:
         r0_samples, used_brazil = estimate_r0(cases_df,
                                               w_place,
-                                              sample_size, 
+                                              SAMPLE_SIZE, 
                                               MIN_DAYS_r0_ESTIMATE, 
                                               w_date)
         if used_brazil:
@@ -636,11 +630,12 @@ if __name__ == '__main__':
         r0_dist = make_r0_widgets()
         st.markdown(texts.r0_ESTIMATION_DONT)
 
-    w_params = make_param_widgets(NEIR0,reported_rate*100)
+    reported_rate = reported_rate*100
+    w_params = make_param_widgets(NEIR0,reported_rate)
     model = SEIRBayes(**w_params, r0_dist=r0_dist)
-#     w_params = make_param_widgets(NEIR0, r0_samples)
+
     model_output = model.sample(sample_size)
-    ei_df = make_EI_df(model_output, sample_size)
+    ei_df = make_EI_df(model_output, sample_size, w_date)
     st.markdown(texts.MODEL_INTRO)
     st.write(texts.SEIRBAYES_DESC)
     w_scale = st.selectbox('Escala do eixo Y',
@@ -651,9 +646,8 @@ if __name__ == '__main__':
 
     download_placeholder = st.empty()
 
-    use_hospital_queue = st.sidebar.checkbox('Simular fila hospitalar')
     if download_placeholder.button('Preparar dados para download em CSV'):
-        href = make_download_href(ei_df, w_params, should_estimate_r0)
+        href = make_download_href(ei_df, w_params, should_estimate_r0, r0_dist)
         st.markdown(href, unsafe_allow_html=True)
         download_placeholder.empty()
 
@@ -663,8 +657,10 @@ if __name__ == '__main__':
     SEIR0 = model._params['init_conditions']
     st.markdown(texts.make_SIMULATION_PARAMS(SEIR0, dists,
                                              should_estimate_r0))
-    st.button('Simular novamente')
-    st.markdown(texts.SIMULATION_CONFIG)
+    
+    st.markdown(texts.HOSPITAL_QUEUE_SIMULATION)
+    use_hospital_queue = st.checkbox('Habilitar simulador de fila hospitalar')
+    #st.markdown(texts.SIMULATION_CONFIG)
 
     #Begining of the queue simulation
     def make_download_simulation_df(df, filename):
@@ -680,11 +676,15 @@ if __name__ == '__main__':
 
     if use_hospital_queue:
 
-        st.markdown(texts.HOSPITAL_QUEUE_SIMULATION)
-
         params_simulation = make_param_widgets_hospital_queue(w_place)
-        simulation_outputs, cut_after = run_queue_model(model_output , cases_df, w_place, w_date, params_simulation,reported_rate)
+        print(model_output)
+        st.write(cases_df.head())
+        st.write(w_place.head())
+        st.write(w_date.head())
+        st.write(params_simulation.head())
+        simulation_outputs, cut_after = run_queue_model(model_output , cases_df, w_place, w_date, params_simulation)
 
+        st.markdown(texts.HOSPITAL_GRAPH_DESCRIPTION)
         st.markdown(texts.HOSPITAL_BREAKDOWN_DESCRIPTION)
 
         def get_breakdown(description, simulation_output):
@@ -706,10 +706,12 @@ if __name__ == '__main__':
                     get_breakdown_start('is_breakdown'), 
                     get_breakdown_start('is_breakdown_icu'))
 
-        st.write(pd.DataFrame(
-            data=[get_breakdown(description, simulation_output) for _, description, simulation_output in simulation_outputs],
-            columns=['Cenário', 'Leitos comuns', 'Leitos UTI'])
-        )
+        st.markdown((
+            pd.DataFrame(
+                data=[get_breakdown(description, simulation_output) for _, description, simulation_output in simulation_outputs],
+                columns=['Cenário', 'Leitos comuns', 'Leitos UTI'])
+            .set_index('Cenário')
+            .to_markdown()))
 
         st.markdown("### Visualizações")
 
