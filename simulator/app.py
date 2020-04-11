@@ -627,7 +627,7 @@ if __name__ == '__main__':
                                               w_date)
 
     r0_dist = r0_samples[:, -1] 
-    should_use_estimated_r0 = np.mean(r0_dist) >= 1.6
+    should_use_estimated_r0 = np.mean(r0_dist) >= 1.9
 
     if should_use_estimated_r0:
         should_estimate_r0 = st.checkbox(
