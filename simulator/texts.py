@@ -2,7 +2,7 @@ INTRODUCTION = '''
 # COVID-19
 O objetivo deste projeto é iniciar uma força tarefa conjunta da comunidade científica e tecnológica a fim de criar modelos de previsão de infectados (e talvez outras métricas) pelo COVID-19, focando no Brasil. O projeto é público e pode ser usado por todos.
 
-Acesse [este link](https://github.com/3778/COVID-19) para mais informações.
+#### Para dúvidas e contribuições, entre em contato por [email](mailto:contato.covidmodels@gmail.com?subject=[Dúvidas%20e%20Contribuições]%20Modelos%20COVID19).
 
 ---
 '''
@@ -60,7 +60,7 @@ HOSPITAL_QUEUE_SIMULATION= '''
 
 ## Simulação de fila hospitalar
 
-**(!) Importante**: a simulação do modelo de fila, pode levar alguns minutos.
+A simulação do modelo de fila, pode levar alguns minutos.
 
 '''
 
@@ -95,7 +95,8 @@ DATA_SOURCES = '''
 ---
 ### Fontes dos dados
 
-* Casos confirmados: [Número de casos confirmados de COVID-19 no Brasil](https://raw.githubusercontent.com/wcota/covid19br/master/cases-brazil-cities-time.csv) (de https://github.com/wcota/covid19br)
+* Casos confirmados por município: [Número de casos confirmados de COVID-19 no Brasil](https://raw.githubusercontent.com/wcota/covid19br/master/cases-brazil-cities-time.csv) (de https://github.com/wcota/covid19br)
+* Casos confirmados por estado: [Painel de casos de doença pelo coronavírus 2019 (COVID-19) no Brasil pelo Ministério da Saúde](https://covid.saude.gov.br/)
 * População: Estimativa IBGE de 01/07/2019 (disponível em: [IBGE - Estimativas da população](https://www.ibge.gov.br/estatisticas/sociais/populacao/9103-estimativas-de-populacao.html))
 '''
 

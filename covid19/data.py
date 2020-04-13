@@ -4,6 +4,10 @@ from pathlib import Path
 DATA_DIR = Path(__file__).resolve().parents[1] / 'data'
 COVID_19_BY_CITY_URL=('https://raw.githubusercontent.com/wcota/covid19br/'
                       'master/cases-brazil-cities-time.csv')
+COVID_19_BY_CITY_TOTALS_URL = ('https://raw.githubusercontent.com/wcota/covid19br/'
+                               'master/cases-brazil-cities.csv')
+COVID_19_BY_STATE_TOTALS_URL = ('https://raw.githubusercontent.com/wcota/covid19br/'
+                                'master/cases-brazil-states.csv')
 IBGE_POPULATION_PATH=DATA_DIR / 'ibge_population.csv'
 IBGE_CODE_PATH=DATA_DIR / 'ibge_city_state.csv'
 
@@ -67,7 +71,6 @@ def load_cases(by, source='wcota'):
               .swaplevel(axis=1)
               .fillna(0)
               .astype(int))
-
 
 def load_population(by):
     ''''Load population from IBGE.
@@ -133,3 +136,34 @@ def get_ibge_code(city, state):
 def get_ibge_codes_uf(state):
     df = pd.read_csv(IBGE_CODE_PATH)
     return df[(df['state'] == state)]['cod_ibge'].values
+
+def get_city_deaths(place):
+
+    df = (pd.read_csv(COVID_19_BY_CITY_TOTALS_URL)
+          .query("city == '"+place+"'"))
+
+    df = df.reset_index()
+    cases = df
+    deaths = df['deaths'][0]
+    return deaths, cases
+
+def get_state_cases_and_deaths(place):
+
+    df = (pd.read_csv(COVID_19_BY_STATE_TOTALS_URL)
+            .query("state == '"+place+"'"))
+    df = df.reset_index()
+    deaths = df['deaths'][df.shape[0]-1]
+
+
+    return deaths, df
+
+def get_brazil_cases_and_deaths():
+
+    df = (pd.read_csv(COVID_19_BY_STATE_TOTALS_URL)
+            .query("state == 'TOTAL'"))
+    df = df.reset_index()
+    print(df)
+    deaths = df['deaths'][df.shape[0]-1]
+
+
+    return deaths, df
