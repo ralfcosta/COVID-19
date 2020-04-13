@@ -625,16 +625,28 @@ if __name__ == '__main__':
             'Qtde. de iterações da simulação (runs)',
             min_value=1, max_value=3_000, step=100,
             value=300)
+    
     st.markdown(texts.r0_ESTIMATION_TITLE)
-    should_estimate_r0 = st.checkbox(
-            'Estimar R0 a partir de dados históricos',
-            value=True)
-    if should_estimate_r0:
-        r0_samples, used_brazil = estimate_r0(cases_df,
+
+    r0_samples, used_brazil = estimate_r0(cases_df,
                                               w_place,
                                               SAMPLE_SIZE, 
                                               MIN_DAYS_r0_ESTIMATE, 
                                               w_date)
+
+    r0_dist = r0_samples[:, -1] 
+    should_use_estimated_r0 = np.mean(r0_dist) >= 1.9
+
+    if should_use_estimated_r0:
+        should_estimate_r0 = st.checkbox(
+                'Estimar R0 a partir de dados históricos',
+                value=True)
+    else:
+        st.markdown(texts.r0_LESS_THAN_THRESHOLD)
+        should_estimate_r0 = False
+
+    if should_estimate_r0:
+        
         if used_brazil:
             st.write(texts.r0_NOT_ENOUGH_DATA(w_place, w_date))
                        
