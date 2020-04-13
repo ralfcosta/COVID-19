@@ -371,9 +371,9 @@ def run_queue_model(model_output , cases_df, w_place, w_date, params_simulation)
             for idx, row in dataset.iterrows():
 
                 if idx < cut_after:
-                    dataset['hospitalizados'].iloc[idx] = round(dataset[execution_columnm].iloc[idx] * params_simulation['confirm_admin_rate']/100)
+                    dataset['hospitalizados'].iloc[idx] = round(dataset[execution_columnm].iloc[idx] * params_simulation['confirm_admin_rate']/reported_rate)
                 else:
-                    dataset['hospitalizados'].iloc[idx] = round(dataset[execution_columnm].iloc[idx] * (params_simulation['confirm_admin_rate']/100) * (reported_rate/100))
+                    dataset['hospitalizados'].iloc[idx] = round(dataset[execution_columnm].iloc[idx] * (params_simulation['confirm_admin_rate']/100) )
 
 
             # dataset = dataset.assign(hospitalizados=round(dataset[execution_columnm]*params_simulation['confirm_admin_rate']*reported_rate/1000))
@@ -484,14 +484,14 @@ def make_r0_widgets(defaults=DEFAULT_PARAMS):
 def estimate_subnotification(cases_df, place, date,w_granularity):
 
     if w_granularity == 'city':
-        city_deaths, city_cases = data.get_city_deaths(place)
+        city_deaths, city_cases = data.get_city_deaths(place,date)
         state = city_cases['state'][0]
         if city_deaths < MIN_DEATH_SUBN:
             place = state
             w_granularity = 'state'
 
     if w_granularity == 'state':
-        state_deaths, state_cases = data.get_state_cases_and_deaths(place)
+        state_deaths, state_cases = data.get_state_cases_and_deaths(place,date)
         if state_deaths < MIN_DEATH_SUBN:
             w_granularity = 'brazil'
 
@@ -509,7 +509,7 @@ def estimate_subnotification(cases_df, place, date,w_granularity):
 
         previous_cases = previous_cases.fillna(0)
         previous_cases = pd.DataFrame(previous_cases, columns=['newCases'])
-        deaths,cases_df = data.get_city_deaths(place)
+        deaths,cases_df = data.get_city_deaths(place,date)
 
         previous_cases['deaths'] = 0
         previous_cases['deaths'][0] = deaths
@@ -519,7 +519,7 @@ def estimate_subnotification(cases_df, place, date,w_granularity):
 
     if w_granularity == 'state':
 
-        state_deaths, cases_df = data.get_state_cases_and_deaths(place)
+        state_deaths, cases_df = data.get_state_cases_and_deaths(place,date)
         previous_cases = cases_df.sort_index(ascending=False)
         previous_cases = previous_cases.reset_index()
         total_deaths = previous_cases['deaths'][0]
@@ -530,7 +530,7 @@ def estimate_subnotification(cases_df, place, date,w_granularity):
 
     if w_granularity == 'brazil':
 
-        brazil_deaths, cases_df = data.get_brazil_cases_and_deaths()
+        brazil_deaths, cases_df = data.get_brazil_cases_and_deaths(date)
         previous_cases = cases_df.sort_index(ascending=False)
         previous_cases = previous_cases.reset_index()
         total_deaths = previous_cases['deaths'][0]
