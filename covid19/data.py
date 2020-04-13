@@ -6,8 +6,11 @@ COVID_19_BY_CITY_URL=('https://raw.githubusercontent.com/wcota/covid19br/'
                       'master/cases-brazil-cities-time.csv')
 COVID_19_BY_CITY_TOTALS_URL = ('https://raw.githubusercontent.com/wcota/covid19br/'
                                'master/cases-brazil-cities.csv')
+<<<<<<< HEAD
 COVID_19_BY_STATE_URL=('https://raw.githubusercontent.com/wcota/covid19br/'
                         'master/cases-brazil-states.csv')
+=======
+>>>>>>> 0f8e3fa04008a05a0e2c7e16ecedf903183f41d9
 COVID_19_BY_STATE_TOTALS_URL = ('https://raw.githubusercontent.com/wcota/covid19br/'
                                 'master/cases-brazil-states.csv')
 IBGE_POPULATION_PATH=DATA_DIR / 'ibge_population.csv'
