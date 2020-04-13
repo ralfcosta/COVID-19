@@ -1023,9 +1023,9 @@ def run_queue_simulation(data,bar, bar_text, params={}):
                                     # Length of stay complete. Remove patient from counts and
                                     # dictionaries
                                     self.hospital.bed_count -= 1
-                                    print('Patient %d leaving bed %7.2f, bed count %d' % (
+                                    #print('Patient %d leaving bed %7.2f, bed count %d' % (
                                     p.id, self.env.now, self.hospital.bed_count))
-                                    print('Patient %d released %7.2f, bed count %d' % (
+                                    #print('Patient %d released %7.2f, bed count %d' % (
                                     p.id, self.env.now, self.hospital.bed_count))
                                     del self.hospital.patients_in_beds[p.id]
                                     self.resources.beds.release(req)
