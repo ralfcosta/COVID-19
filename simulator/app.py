@@ -150,18 +150,26 @@ def make_param_widgets(NEIR0, reported_rate, r0_samples=None, defaults=DEFAULT_P
             't_max': t_max,
             'NEIR0': (N, E0, I0, R0)}
 
-def make_param_widgets_hospital_queue(city, defaults=DEFAULT_PARAMS):
-     
-    def load_beds(ibge_code):
-        # leitos
+def make_param_widgets_hospital_queue(location, w_granularity, defaults=DEFAULT_PARAMS):
+    
+
+    def load_beds(ibge_codes):
+
         beds_data = pd.read_csv('simulator/hospital_queue/data/ibge_leitos.csv', sep = ';')
-        beds_data_filtered = beds_data[beds_data['cod_ibge']==ibge_code]
-        beds_data_filtered.head()
+        
+        ibge_codes = pd.Series(ibge_codes).rename('codes_to_filter')
+        beds_data_filtered = (beds_data[beds_data['cod_ibge'].isin(ibge_codes)]
+            [['qtd_leitos', 'qtd_uti']]
+            .sum())
 
-        return beds_data_filtered['qtd_leitos'].values[0], beds_data_filtered['qtd_uti'].values[0]
+        return beds_data_filtered['qtd_leitos'], beds_data_filtered['qtd_uti']
 
-    city, uf = city.split("/")
-    qtd_beds, qtd_beds_uci = load_beds(data.get_ibge_code(city, uf))
+    if w_granularity == 'state':
+        uf = location
+        qtd_beds, qtd_beds_uci = load_beds(data.get_ibge_codes_uf(uf))
+    else:        
+        city, uf = location.split("/")
+        qtd_beds, qtd_beds_uci = load_beds([data.get_ibge_code(city, uf)])
 
     #TODO: Adjust reliable cCFR
     #admiss_rate = FATAL_RATE_BASELINE/cCFR
@@ -689,11 +697,7 @@ if __name__ == '__main__':
 
     if use_hospital_queue:
 
-        params_simulation = make_param_widgets_hospital_queue(w_place)
-        # st.write(cases_df.head())
-        # st.write(w_place)
-        # st.write(w_date)
-        # st.write(params_simulation)
+        params_simulation = make_param_widgets_hospital_queue(w_place, w_granularity)
         simulation_outputs, cut_after = run_queue_model(model_output , cases_df, w_place, w_date, params_simulation)
 
         st.markdown(texts.HOSPITAL_GRAPH_DESCRIPTION)
