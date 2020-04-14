@@ -39,7 +39,7 @@ spec:
     - nodePort: 30968
       port: 80
       protocol: TCP
-      targetPort: 8080
+      targetPort: 8501
   selector:
     app: covid-hospital-queue-dev
   sessionAffinity: None
