@@ -10,11 +10,11 @@
    args:
    - 'run'
    - 'deploy'
-   - '$_SERVICE-NAME]'
+   - '$_SERVICE-NAME'
    - '--image'
    - 'gcr.io/$_PROJECT_ID/$_SERVICE-NAME:$COMMIT_SHA'
    - '--region'
-   - '[REGION]'
+   - '$_REGION'
    - '--platform'
    - 'managed'
  images:
