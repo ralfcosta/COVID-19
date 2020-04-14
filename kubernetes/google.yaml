@@ -6,7 +6,7 @@ metadata:
   name: covid-hospital-queue
   namespace: default
 spec:
-  replicas: 2
+  replicas: 1
   selector:
     matchLabels:
       app: covid-hospital-queue
@@ -31,7 +31,7 @@ metadata:
   name: covid-hospital-queue
   namespace: default
 spec:
-  maxReplicas: 4
+  maxReplicas: 2
   metrics:
     - resource:
         name: cpu
