@@ -136,6 +136,13 @@ def get_ibge_code(city, state):
 
     return code
 
+
+def get_ibge_code_list():
+    df = pd.read_csv(IBGE_CODE_PATH)
+    codes = df['cod_ibge'].to_list()
+
+    return codes
+
 def get_city_deaths(place,date):
 
     df = (pd.read_csv(COVID_19_BY_CITY_URL)
@@ -149,17 +156,20 @@ def get_city_deaths(place,date):
 def get_state_cases_and_deaths(place,date):
 
     df = (pd.read_csv(COVID_19_BY_STATE_URL)
-            .query("state == '"+place+"' and date <='"+date+"'"))
+            .query("state == '"+place+"'and date <='"+date+"'"))
     df = df.reset_index()
     deaths = df['deaths'][df.shape[0]-1]
+
 
     return deaths, df
 
 def get_brazil_cases_and_deaths(date):
 
     df = (pd.read_csv(COVID_19_BY_STATE_URL)
-            .query("state == 'TOTAL' and date <= '"+date+"'"))
+            .query("state == 'TOTAL' and date <='"+date+"'"))
     df = df.reset_index()
+
     deaths = df['deaths'][df.shape[0]-1]
+
 
     return deaths, df
