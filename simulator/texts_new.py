@@ -17,3 +17,7 @@ Para outros cenários, alterer um parâmetro e tecle **Enter**. O novo resultado
 ---
 '''
 
+INTRODUCTION = '''
+No menu da barra à esquerda, selecione as projeções que deseja visualizar e altere os parâmetros para simular diferentes cenários.
+'''
+
