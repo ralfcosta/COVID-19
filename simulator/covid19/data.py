@@ -6,6 +6,8 @@ COVID_19_BY_CITY_URL=('https://raw.githubusercontent.com/wcota/covid19br/'
                       'master/cases-brazil-cities-time.csv')
 COVID_19_BY_CITY_TOTALS_URL = ('https://raw.githubusercontent.com/wcota/covid19br/'
                                'master/cases-brazil-cities.csv')
+COVID_19_BY_STATE_URL=('https://raw.githubusercontent.com/wcota/covid19br/'
+                        'master/cases-brazil-states.csv')
 COVID_19_BY_STATE_TOTALS_URL = ('https://raw.githubusercontent.com/wcota/covid19br/'
                                 'master/cases-brazil-states.csv')
 IBGE_POPULATION_PATH=DATA_DIR / 'ibge_population.csv'
@@ -141,40 +143,33 @@ def get_ibge_code_list():
 
     return codes
 
-def get_city_deaths(place):
+def get_city_deaths(place,date):
 
-    df = (pd.read_csv(COVID_19_BY_CITY_TOTALS_URL)
-          .query("city == '"+place+"'"))
+    df = (pd.read_csv(COVID_19_BY_CITY_URL)
+          .query("city == '"+place+"' and date =='"+date+"'"))
 
     df = df.reset_index()
     cases = df
     deaths = df['deaths'][df.shape[0]-1]
     return deaths, cases
 
-def get_state_cases_and_deaths(place):
+def get_state_cases_and_deaths(place,date):
 
-    df = (pd.read_csv(COVID_19_BY_STATE_TOTALS_URL)
-            .query("state == '"+place+"'"))
+    df = (pd.read_csv(COVID_19_BY_STATE_URL)
+            .query("state == '"+place+"'and date <='"+date+"'"))
     df = df.reset_index()
     deaths = df['deaths'][df.shape[0]-1]
-<<<<<<< HEAD:covid19/data.py
-=======
 
->>>>>>> 70a99d117ffc776ff2571089f0dbda04b71885df:simulator/covid19/data.py
 
     return deaths, df
 
-def get_brazil_cases_and_deaths():
+def get_brazil_cases_and_deaths(date):
 
-    df = (pd.read_csv(COVID_19_BY_STATE_TOTALS_URL)
-            .query("state == 'TOTAL'"))
+    df = (pd.read_csv(COVID_19_BY_STATE_URL)
+            .query("state == 'TOTAL' and date <='"+date+"'"))
     df = df.reset_index()
-<<<<<<< HEAD:covid19/data.py
-    deaths = df['deaths'][df.shape[0]-1]
-=======
-    print(df)
+
     deaths = df['deaths'][df.shape[0]-1]
 
->>>>>>> 70a99d117ffc776ff2571089f0dbda04b71885df:simulator/covid19/data.py
 
     return deaths, df
