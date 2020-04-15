@@ -34,15 +34,15 @@ DEFAULT_PARAMS = {
     'r0_dist': (2.5, 6.0, 0.95, 'lognorm'),
 
     #Simulations params
-    'confirm_admin_rate': .14,
-    'length_of_stay_covid': 10,
+    'confirm_admin_rate': .07,    #considerando 2,8% a mortalidade do cdc para a pirâmide etária do Brasil
+    'length_of_stay_covid': 9,
     'length_of_stay_covid_uti': 8,
-    'icu_rate': .1,
-    'icu_rate_after_bed': .08,
+    'icu_rate': .0,              #deve ser zero após implementarmos transferência dos mais graves do leito normal p/ a UTI quando os leitos normais lotarem antes
+    'icu_rate_after_bed': .25,
 
     'icu_death_rate': .78,
-    'icu_queue_death_rate': .1,
-    'queue_death_rate': .1,
+    'icu_queue_death_rate': .0,
+    'queue_death_rate': .0,
 
     'total_beds': 12222,
     'total_beds_icu': 2421,
@@ -376,7 +376,7 @@ def run_queue_model(model_output , cases_df, w_place, w_date, params_simulation)
 
             bar_text = st.empty()
             bar = st.progress(0)
-            
+
             bar_text.text(f'Processando o cenário {execution_description.lower()}...')
             simulation_output = (run_queue_simulation(dataset, bar, bar_text, params_simulation)
                 .join(dataset, how='inner'))
@@ -391,15 +391,17 @@ def run_queue_model(model_output , cases_df, w_place, w_date, params_simulation)
 def calculate_input_hospital_queue(model_output, cases_df, place, date):
 
     S, E, I, R, t = model_output
+    
     previous_cases = cases_df[place]
-
+    
+    
     # Formatting previous dates
     all_dates = pd.date_range(start=MIN_DATA_BRAZIL, end=date).strftime('%Y-%m-%d')
     all_dates_df = pd.DataFrame(index=all_dates,
                                 data={"dummy": np.zeros(len(all_dates))})
-    previous_cases = all_dates_df.join(previous_cases, how='outer')['newCases']
+    previous_cases = all_dates_df.join(previous_cases, how='left')['newCases']
     cut_after = previous_cases.shape[0]
-
+    
     # Calculating newly infected for all samples
     size = sample_size*model.params['t_max']
     NI = np.add(pd.DataFrame(I).apply(lambda x: x - x.shift(1)).values,
@@ -433,6 +435,8 @@ def calculate_input_hospital_queue(model_output, cases_df, place, date):
         .drop(columns=['newCases', 'newly_infected_std'])
         .reset_index()
         .rename(columns={'index':'day'}))
+    
+    
 
     return df, cut_after
 
