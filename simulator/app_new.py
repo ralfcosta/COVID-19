@@ -3,6 +3,8 @@ import texts_new
 
 from covid19 import data
 
+import st_app_r0
+
 def create_basic_sidebar(): 
 
     MIN_DATA_BRAZIL = '2020-03-26'
@@ -54,31 +56,60 @@ def create_basic_sidebar():
         format_func=format_local)
 
     if w_location_granularity == 'city':
+
         cases_df = data.load_cases(w_location_granularity, 'wcota')
         population_df = data.load_population(w_location_granularity)
         options_place = make_place_options(cases_df, population_df)
-        index=options_place.get_loc(DEFAULT_CITY)
-        location = st.sidebar.selectbox(
+
+        index = options_place.get_loc(DEFAULT_CITY)
+
+        w_location = st.sidebar.selectbox(
             'Município',
             options=options_place,
-            index=options_place.get_loc(DEFAULT_CITY))
+            index=index)
+
     elif w_location_granularity == "state":
         
         cases_df = data.load_cases(w_location_granularity, 'ms')
         population_df = data.load_population(w_location_granularity)
         options_place = make_place_options(cases_df, population_df)
         
-        index=options_place.get_loc(DEFAULT_STATE)
-        location = st.sidebar.selectbox(
+        index = options_place.get_loc(DEFAULT_STATE)
+
+        w_location = st.sidebar.selectbox(
             'Estado',
             options=options_place,
-            index=options_place.get_loc(DEFAULT_STATE))
-    # options_place = 
+            index=index)
 
-    # population_df = data.load_population(w_granularity)
-    st.sidebar.selectbox('Data', ('2020-04-15', '2020-04-14'))
+    options_date = make_date_options(cases_df, w_location)
+    w_date = st.sidebar.selectbox('Data',
+                                  options=options_date,
+                                  index=len(options_date)-1)
+    
+    return {"location_granularity": w_location_granularity,
+            "date": w_date,
+            "location": w_location,
+            "cases": cases_df,
+            "population": population_df,
+            "r0_model": w_r0_model,
+            "seir_model": w_seir_model,
+            "queue_model": w_queue_model}
 
 if __name__ == '__main__':
 
-    create_basic_sidebar()
-    st.markdown(texts_new.INTRODUCTION)
+    my_placeholder = st.empty()
+    my_placeholder.markdown(texts_new.INTRODUCTION)
+
+    base_parameters = create_basic_sidebar()
+
+    if base_parameters['r0_model']:
+        my_placeholder.markdown("# Número de reprodução básico")
+        st_app_r0.create_r0_interface(base_parameters['date'],
+                                      base_parameters["location"],
+                                      base_parameters["cases"])
+    
+    if base_parameters['seir_model']:
+        None
+    
+    if base_parameters['queue_model']:
+        None
