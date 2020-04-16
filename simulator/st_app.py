@@ -1,5 +1,4 @@
 import streamlit as st
-import os
 import base64
 import pandas as pd
 import numpy as np
@@ -8,15 +7,15 @@ from datetime import timedelta
 from json import dumps
 
 
-from st_utils.viz import make_simulation_chart
+from st_utils import texts
+from st_utils.viz import make_simulation_chart, prep_tidy_data_to_plot, make_combined_chart, plot_r0
+from st_utils.formats import global_format_func
 from hospital_queue.confirmation_button import cache_on_button_press
 from hospital_queue.queue_simulation import run_queue_simulation
-from st_utils.viz import prep_tidy_data_to_plot, make_combined_chart, plot_r0
-from st_utils.formats import global_format_func
+from covid19.utils import get_latest_file
 from covid19 import data
 from covid19.models import SEIRBayes
 from covid19.estimation import ReproductionNumber
-from st_utils import texts
 
 
 FATAL_RATE_BASELINE = 0.0138 #Verity R, Okell LC, Dorigatti I et al. Estimates of the severity of covid-19 disease. medRxiv 2020.
@@ -156,8 +155,8 @@ def make_param_widgets_hospital_queue(city, defaults=DEFAULT_PARAMS):
      
     def load_beds(ibge_code):
         # leitos
-        beds_data = pd.read_csv(os.path.join(os.getcwd(), 'simulator/data/ibge_leitos.csv'), sep =';')
-        beds_data_filtered = beds_data[beds_data['cod_ibge'] == ibge_code]
+        beds_data = pd.read_csv(get_latest_file('ibge_leitos'))
+        beds_data_filtered = beds_data[beds_data['codibge'] == ibge_code]
         beds_data_filtered.head()
 
         return beds_data_filtered['qtd_leitos'].values[0], beds_data_filtered['qtd_uti'].values[0]
@@ -232,14 +231,14 @@ def make_param_widgets_hospital_queue(city, defaults=DEFAULT_PARAMS):
              step=1,
              min_value=0,
              max_value=int(1e7),
-             value=qtd_beds)
+             value=int(qtd_beds))
         
     total_beds_icu = st.sidebar.number_input(
              'Quantidade de leitos de UTI',
              step=1,
              min_value=0,
              max_value=int(1e7),
-             value=qtd_beds_uci)
+             value=int(qtd_beds_uci))
 
     available_rate = st.sidebar.number_input(
              'Proporção de leitos disponíveis',
