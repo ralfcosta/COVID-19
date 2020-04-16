@@ -1,21 +1,23 @@
-import altair as alt
 import streamlit as st
-import texts
+import os
 import base64
 import pandas as pd
 import numpy as np
 import math               #### add to requirements
+from datetime import timedelta
+from json import dumps
+
+
+from st_utils.viz import make_simulation_chart
+from hospital_queue.confirmation_button import cache_on_button_press
+from hospital_queue.queue_simulation import run_queue_simulation
+from st_utils.viz import prep_tidy_data_to_plot, make_combined_chart, plot_r0
+from st_utils.formats import global_format_func
 from covid19 import data
 from covid19.models import SEIRBayes
-from hospital_queue.queue_simulation import run_queue_simulation
-from viz import prep_tidy_data_to_plot, make_combined_chart, make_simulation_chart
-from formats import global_format_func
-from hospital_queue.confirmation_button import cache_on_button_press
-from datetime import datetime, timedelta
-from viz import prep_tidy_data_to_plot, make_combined_chart, plot_r0
-from formats import global_format_func
-from json import dumps
 from covid19.estimation import ReproductionNumber
+from st_utils import texts
+
 
 FATAL_RATE_BASELINE = 0.0138 #Verity R, Okell LC, Dorigatti I et al. Estimates of the severity of covid-19 disease. medRxiv 2020.
 SAMPLE_SIZE=500
@@ -32,15 +34,15 @@ DEFAULT_PARAMS = {
     'r0_dist': (2.5, 6.0, 0.95, 'lognorm'),
 
     #Simulations params
-    'confirm_admin_rate': .14,
-    'length_of_stay_covid': 10,
+    'confirm_admin_rate': .07,    #considerando 2,8% a mortalidade do cdc para a pirâmide etária do Brasil
+    'length_of_stay_covid': 9,
     'length_of_stay_covid_uti': 8,
-    'icu_rate': .1,
-    'icu_rate_after_bed': .08,
+    'icu_rate': .0,              #deve ser zero após implementarmos transferência dos mais graves do leito normal p/ a UTI quando os leitos normais lotarem antes
+    'icu_rate_after_bed': .25,
 
     'icu_death_rate': .78,
-    'icu_queue_death_rate': .1,
-    'queue_death_rate': .1,
+    'icu_queue_death_rate': .0,
+    'queue_death_rate': .0,
 
     'total_beds': 12222,
     'total_beds_icu': 2421,
@@ -150,26 +152,18 @@ def make_param_widgets(NEIR0, reported_rate, r0_samples=None, defaults=DEFAULT_P
             't_max': t_max,
             'NEIR0': (N, E0, I0, R0)}
 
-def make_param_widgets_hospital_queue(location, w_granularity, defaults=DEFAULT_PARAMS):
-    
+def make_param_widgets_hospital_queue(city, defaults=DEFAULT_PARAMS):
+     
+    def load_beds(ibge_code):
+        # leitos
+        beds_data = pd.read_csv(os.path.join(os.getcwd(), 'simulator/data/ibge_leitos.csv'), sep =';')
+        beds_data_filtered = beds_data[beds_data['cod_ibge'] == ibge_code]
+        beds_data_filtered.head()
 
-    def load_beds(ibge_codes):
+        return beds_data_filtered['qtd_leitos'].values[0], beds_data_filtered['qtd_uti'].values[0]
 
-        beds_data = pd.read_csv('simulator/hospital_queue/data/ibge_leitos.csv', sep = ';')
-        
-        ibge_codes = pd.Series(ibge_codes).rename('codes_to_filter')
-        beds_data_filtered = (beds_data[beds_data['cod_ibge'].isin(ibge_codes)]
-            [['qtd_leitos', 'qtd_uti']]
-            .sum())
-
-        return beds_data_filtered['qtd_leitos'], beds_data_filtered['qtd_uti']
-
-    if w_granularity == 'state':
-        uf = location
-        qtd_beds, qtd_beds_uci = load_beds(data.get_ibge_codes_uf(uf))
-    else:        
-        city, uf = location.split("/")
-        qtd_beds, qtd_beds_uci = load_beds([data.get_ibge_code(city, uf)])
+    city, uf = city.split("/")
+    qtd_beds, qtd_beds_uci = load_beds(data.get_ibge_code(city, uf))
 
     #TODO: Adjust reliable cCFR
     #admiss_rate = FATAL_RATE_BASELINE/cCFR
@@ -373,7 +367,7 @@ def run_queue_model(model_output , cases_df, w_place, w_date, params_simulation)
                 if idx < cut_after:
                     dataset['hospitalizados'].iloc[idx] = round(dataset[execution_columnm].iloc[idx] * params_simulation['confirm_admin_rate']/reported_rate)
                 else:
-                    dataset['hospitalizados'].iloc[idx] = round(dataset[execution_columnm].iloc[idx] * (params_simulation['confirm_admin_rate']/100) )
+                    dataset['hospitalizados'].iloc[idx] = round(dataset[execution_columnm].iloc[idx] * (params_simulation['confirm_admin_rate']/100))
 
 
             # dataset = dataset.assign(hospitalizados=round(dataset[execution_columnm]*params_simulation['confirm_admin_rate']*reported_rate/1000))
@@ -382,7 +376,7 @@ def run_queue_model(model_output , cases_df, w_place, w_date, params_simulation)
 
             bar_text = st.empty()
             bar = st.progress(0)
-            
+
             bar_text.text(f'Processando o cenário {execution_description.lower()}...')
             simulation_output = (run_queue_simulation(dataset, bar, bar_text, params_simulation)
                 .join(dataset, how='inner'))
@@ -397,15 +391,17 @@ def run_queue_model(model_output , cases_df, w_place, w_date, params_simulation)
 def calculate_input_hospital_queue(model_output, cases_df, place, date):
 
     S, E, I, R, t = model_output
+    
     previous_cases = cases_df[place]
-
+    
+    
     # Formatting previous dates
     all_dates = pd.date_range(start=MIN_DATA_BRAZIL, end=date).strftime('%Y-%m-%d')
     all_dates_df = pd.DataFrame(index=all_dates,
                                 data={"dummy": np.zeros(len(all_dates))})
-    previous_cases = all_dates_df.join(previous_cases, how='outer')['newCases']
+    previous_cases = all_dates_df.join(previous_cases, how='left')['newCases']
     cut_after = previous_cases.shape[0]
-
+    
     # Calculating newly infected for all samples
     size = sample_size*model.params['t_max']
     NI = np.add(pd.DataFrame(I).apply(lambda x: x - x.shift(1)).values,
@@ -439,6 +435,8 @@ def calculate_input_hospital_queue(model_output, cases_df, place, date):
         .drop(columns=['newCases', 'newly_infected_std'])
         .reset_index()
         .rename(columns={'index':'day'}))
+    
+    
 
     return df, cut_after
 
@@ -625,28 +623,16 @@ if __name__ == '__main__':
             'Qtde. de iterações da simulação (runs)',
             min_value=1, max_value=3_000, step=100,
             value=300)
-    
     st.markdown(texts.r0_ESTIMATION_TITLE)
-
-    r0_samples, used_brazil = estimate_r0(cases_df,
+    should_estimate_r0 = st.checkbox(
+            'Estimar R0 a partir de dados históricos',
+            value=True)
+    if should_estimate_r0:
+        r0_samples, used_brazil = estimate_r0(cases_df,
                                               w_place,
                                               SAMPLE_SIZE, 
                                               MIN_DAYS_r0_ESTIMATE, 
                                               w_date)
-
-    r0_dist = r0_samples[:, -1] 
-    should_use_estimated_r0 = np.mean(r0_dist) >= 1.9
-
-    if should_use_estimated_r0:
-        should_estimate_r0 = st.checkbox(
-                'Estimar R0 a partir de dados históricos',
-                value=True)
-    else:
-        st.markdown(texts.r0_LESS_THAN_THRESHOLD)
-        should_estimate_r0 = False
-
-    if should_estimate_r0:
-        
         if used_brazil:
             st.write(texts.r0_NOT_ENOUGH_DATA(w_place, w_date))
                        
@@ -709,7 +695,11 @@ if __name__ == '__main__':
 
     if use_hospital_queue:
 
-        params_simulation = make_param_widgets_hospital_queue(w_place, w_granularity)
+        params_simulation = make_param_widgets_hospital_queue(w_place)
+        # st.write(cases_df.head())
+        # st.write(w_place)
+        # st.write(w_date)
+        # st.write(params_simulation)
         simulation_outputs, cut_after = run_queue_model(model_output , cases_df, w_place, w_date, params_simulation)
 
         st.markdown(texts.HOSPITAL_GRAPH_DESCRIPTION)
