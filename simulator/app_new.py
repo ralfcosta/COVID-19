@@ -4,7 +4,9 @@ import texts_new
 from covid19 import data
 
 import st_app_r0
+import st_app_seir
 
+from datetime import datetime
 def create_basic_sidebar(): 
 
     MIN_DATA_BRAZIL = '2020-03-26'
@@ -18,6 +20,10 @@ def create_basic_sidebar():
             'city': 'Município'
         }.get(key, key)
 
+    def format_date(date):
+        return (datetime
+                    .strptime(date, "%Y-%m-%d")
+                    .strftime("%d/%m/%Y"))
     @st.cache
     def make_place_options(cases_df, population_df):
         return (cases_df
@@ -84,7 +90,8 @@ def create_basic_sidebar():
     options_date = make_date_options(cases_df, w_location)
     w_date = st.sidebar.selectbox('Data',
                                   options=options_date,
-                                  index=len(options_date)-1)
+                                  index=len(options_date)-1,
+                                  format_func=format_date)
     
     return {"location_granularity": w_location_granularity,
             "date": w_date,
@@ -104,12 +111,24 @@ if __name__ == '__main__':
 
     if base_parameters['r0_model']:
         my_placeholder.markdown("# Número de reprodução básico")
-        st_app_r0.create_r0_interface(base_parameters['date'],
-                                      base_parameters["location"],
-                                      base_parameters["cases"])
+        r0_samples, used_brasil = st_app_r0.build_r0(base_parameters['date'],
+                                                     base_parameters["location"],
+                                                     base_parameters["cases"])
     
     if base_parameters['seir_model']:
-        None
+        
+        if not base_parameters['r0_model']:
+            my_placeholder.markdown("# Número de reprodução básico")
+            r0_samples, _ = st_app_r0.build_r0(base_parameters['date'],
+                                                         base_parameters["location"],
+                                                         base_parameters["cases"])
+
+        st_app_seir.build_seir(base_parameters['date'],
+                               base_parameters["location"],
+                               base_parameters["cases"],
+                               base_parameters["population"],
+                               base_parameters["location_granularity"],
+                               r0_samples)
     
-    if base_parameters['queue_model']:
+    if base_sparameters['queue_model']:
         None

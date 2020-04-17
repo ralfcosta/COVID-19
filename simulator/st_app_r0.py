@@ -60,9 +60,9 @@ def estimate_r0(cases_df,
     samples = Rt.sample_from_posterior(sample_size=sample_size)
     return samples, used_brazil
 
-def create_r0_interface(w_date,
-                        w_location,
-                        cases_df):
+def build_r0(w_date,
+             w_location,
+             cases_df):
 
     r0_samples, used_brazil = estimate_r0(cases_df,
                                           w_location,
@@ -84,3 +84,6 @@ def create_r0_interface(w_date,
     st.markdown(f'**O $R_{{0}}$ estimado está entre '
                 f'${np.quantile(r0_dist, 0.01):.03}$ e ${np.quantile(r0_dist, 0.99):.03}$**')
     st.markdown(texts.r0_CITATION)
+    st.markdown("---")
+
+    return r0_samples, used_brazil
