@@ -162,12 +162,12 @@ def estimate_subnotification(cases_df, place, date,w_granularity):
 
         return subnotification(previous_cases)
 
-def make_NEIR0(cases_df, population_df, place, date):
+def make_NEIR0(cases_df, population_df, place, date,reported_rate):
+
     N0 = population_df[place]
-    I0 = cases_df[place]['totalCases'][date]
-    E0 = 2*I0
-    R0 = 0
-    return (N0, E0, I0, R0)
+    EIR = cases_df[place]['totalCases'][date]
+    
+    return (N0, EIR)
 
 def make_download_href(df, params, should_estimate_r0, r0_dist):
     _params = {
@@ -209,7 +209,7 @@ def make_download_href(df, params, should_estimate_r0, r0_dist):
     """
 
 def make_param_widgets(NEIR0, reported_rate, r0_samples=None, defaults=DEFAULT_PARAMS):
-    _N0, _E0, _I0, _R0 = map(int, NEIR0)
+    _N0, _EIR0 = map(int, NEIR0)
     interval_density = 0.95
     family = 'lognorm'
 
@@ -225,19 +225,11 @@ def make_param_widgets(NEIR0, reported_rate, r0_samples=None, defaults=DEFAULT_P
                                     min_value=0, max_value=1_000_000_000, step=500_000,
                                     value=_N0)
 
-        E0 = st.sidebar.number_input('Indivíduos expostos inicialmente (E0)',
-                                    min_value=0, max_value=1_000_000_000,
-                                    value=_E0)
-
-        I0 = st.sidebar.number_input('Indivíduos infecciosos inicialmente (I0)',
-                                    min_value=0, max_value=1_000_000_000,
-                                    value=_I0)
-
-        R0 = st.sidebar.number_input('Indivíduos removidos com imunidade inicialmente (R0)',
-                                    min_value=0, max_value=1_000_000_000,
-                                    value=_R0)
+        EIR0 = st.sidebar.number_input('Indivíduos que já foram infectados e confirmados',
+                                min_value=0, max_value=1_000_000_000,
+                                value=_EIR0)
     else:
-        fator_subr, N, E0, I0, R0 = reported_rate, _N0,_E0,_I0,_R0
+        fator_subr, N, EIR0 = reported_rate, _N0, _EIR0
 
     st.sidebar.markdown("---")
     if st.sidebar.checkbox('Período de infecção (1/γ) e tempo incubação (1/α)') :
@@ -283,7 +275,7 @@ def make_param_widgets(NEIR0, reported_rate, r0_samples=None, defaults=DEFAULT_P
             'gamma_inv_dist': (gamma_inf, gamma_sup, interval_density, family),
             't_max': t_max,
             'sample_size': sample_size,
-            'NEIR0': (N, E0, I0, R0)}
+            'NEIR0': (N, EIR0)}
 
 def build_seir(w_date,
                w_location,
@@ -297,14 +289,13 @@ def build_seir(w_date,
                                                    w_date,
                                                    w_location_granulariy)
     
-    NEIR0 = make_NEIR0(cases_df, population_df, w_location, w_date)
+    NEIR0 = make_NEIR0(cases_df, population_df, w_location, w_date, reported_rate)
     
     reported_rate = reported_rate*100
     r0_dist = r0_samples[:, -1]
 
     w_params = make_param_widgets(NEIR0,reported_rate)
     sample_size = w_params.pop('sample_size')
-
     model = SEIRBayes(**w_params, r0_dist=r0_dist)
 
     model_output = model.sample(sample_size)
@@ -330,5 +321,6 @@ def build_seir(w_date,
 
     SEIR0 = model._params['init_conditions']
     st.markdown(texts.make_SIMULATION_PARAMS(SEIR0, dists, True))
+    st.markdown("---")
 
-    return reported_rate, cCFR
+    return (model_output, sample_size, w_params['t_max']), reported_rate
