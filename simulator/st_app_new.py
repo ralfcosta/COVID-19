@@ -154,5 +154,5 @@ if __name__ == '__main__':
                                            base_parameters["location_granularity"],
                                            seir_output,
                                            reported_rate)
-    
+    st.write(texts.INTRODUCTION)
     st.markdown(texts.DATA_SOURCES)

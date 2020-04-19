@@ -14,11 +14,10 @@ from hospital_queue.queue_simulation import run_queue_simulation
 
 MIN_DATA_BRAZIL = '2020-03-26'
 
-DEFAULT_PARAMS = {'confirm_admin_rate': .07,  # considerando 2,8% a mortalidade do cdc para a pirâmide etária do Brasil
+DEFAULT_PARAMS = {'confirm_admin_rate': .07,  
     'length_of_stay_covid': 9,
     'length_of_stay_covid_uti': 8,
-    'icu_rate': .0,  # deve ser zero após implementarmos transferência dos mais graves do leito normal p/ a UTI \
-    # quando os leitos normais lotarem antes
+    'icu_rate': .0,  
     'icu_rate_after_bed': .25,
 
     'icu_death_rate': .78,
@@ -65,12 +64,16 @@ def make_param_widgets_hospital_queue(location, w_granularity, defaults=DEFAULT_
 
         return beds_data_filtered['qtd_leitos'], beds_data_filtered['qtd_uti']
 
+    confirm_admin_rate = DEFAULT_PARAMS['confirm_admin_rate']*100
+
     if w_granularity == 'state':
         uf = location
         qtd_beds, qtd_beds_uci = load_beds(data.get_ibge_codes_uf(uf))
+        confirm_admin_rate = data.state_hospitalization(uf)
     else:
         city, uf = location.split("/")
         qtd_beds, qtd_beds_uci = load_beds([data.get_ibge_code(city, uf)])
+        confirm_admin_rate = data.city_hospitalization(city,uf)
 
     st.sidebar.markdown('---')
 
@@ -80,7 +83,7 @@ def make_param_widgets_hospital_queue(location, w_granularity, defaults=DEFAULT_
                 step=1.0,
                 min_value=0.0,
                 max_value=100.0,
-                value=DEFAULT_PARAMS['confirm_admin_rate']*100)
+                value=100*confirm_admin_rate)
 
         los_covid = st.sidebar.number_input(
                 'Tempo de estadia médio no leito comum (dias)',
@@ -159,10 +162,10 @@ def make_param_widgets_hospital_queue(location, w_granularity, defaults=DEFAULT_
                 max_value=1.,
                 value=DEFAULT_PARAMS['available_rate_icu'])
     else:
-        confirm_admin_rate = DEFAULT_PARAMS['confirm_admin_rate']*100
+        confirm_admin_rate = confirm_admin_rate*100
         los_covid = DEFAULT_PARAMS['length_of_stay_covid']
         los_covid_icu = DEFAULT_PARAMS['length_of_stay_covid_uti']
-        icu_rate = DEFAULT_PARAMS['icu_death_rate']
+        icu_rate = DEFAULT_PARAMS['icu_rate']
         icu_death_rate = DEFAULT_PARAMS['icu_death_rate']
         icu_queue_death_rate = DEFAULT_PARAMS['icu_queue_death_rate']
         queue_death_rate = DEFAULT_PARAMS['queue_death_rate']
@@ -273,7 +276,7 @@ def run_queue_model(model_output,
 
             bar_text = st.empty()
             bar = st.progress(0)
-
+            
             bar_text.text(f'Processando o cenário {execution_description.lower()}...')
             simulation_output = (run_queue_simulation(dataset, bar, bar_text, params_simulation)
                 .join(dataset, how='inner'))
@@ -344,10 +347,10 @@ def build_queue_simulator(w_date,
             .assign(description=description)) 
             for _, description, simulation_output in simulation_outputs])
         
-    st.altair_chart(make_simulation_chart(plot_output, "Occupied_beds", "Ocupação de leitos comuns"))
-    st.altair_chart(make_simulation_chart(plot_output, "ICU_Occupied_beds", "Ocupação de leitos de UTI"))
-    st.altair_chart(make_simulation_chart(plot_output, "Queue", "Fila de pacientes"))
-    st.altair_chart(make_simulation_chart(plot_output, "ICU_Queue", "Fila de pacientes UTI"))
+    st.altair_chart(make_simulation_chart(plot_output, "Occupied_beds", "Ocupação de leitos comuns",params_simulation["available_rate"],params_simulation["available_rate_icu"]))
+    st.altair_chart(make_simulation_chart(plot_output, "ICU_Occupied_beds", "Ocupação de leitos de UTI",params_simulation["available_rate"],params_simulation["available_rate_icu"]))
+    st.altair_chart(make_simulation_chart(plot_output, "Queue", "Fila de pacientes",params_simulation["available_rate"],params_simulation["available_rate_icu"]))
+    st.altair_chart(make_simulation_chart(plot_output, "ICU_Queue", "Fila de pacientes UTI",params_simulation["available_rate"],params_simulation["available_rate_icu"]))
 
     href = make_download_simulation_df(plot_output, 'queue-simulator.3778.care.csv')
     st.markdown(href, unsafe_allow_html=True)

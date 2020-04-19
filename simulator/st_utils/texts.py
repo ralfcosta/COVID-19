@@ -1,8 +1,8 @@
 INTRODUCTION = '''
-# COVID-19
+# COVID-19-BR
 O objetivo deste projeto é iniciar uma força tarefa conjunta da comunidade científica e tecnológica a fim de criar modelos de previsão de infectados (e talvez outras métricas) pelo COVID-19, focando no Brasil. O projeto é público e pode ser usado por todos.
 
-#### Para dúvidas e contribuições, entre em contato por [email](mailto:contato.covidmodels@gmail.com?subject=[Dúvidas%20e%20Contribuições]%20Modelos%20COVID19).
+#### Para dúvidas e contribuições, entre em contato por [email](mailto:covid19br.site@gmail.com?subject=[Dúvidas%20e%20Contribuições]%20Modelos%20COVID19).
 
 ---
 '''
@@ -15,7 +15,7 @@ Para simular outros cenários, altere um parâmetro e tecle **Enter**. O novo re
 
 MODEL_INTRO='''
 ## Modelo SEIR-Bayes
-O gráfico abaixo mostra o resultado da simulação da evolução de pacientes infectados para os parâmetros escolhidos no menu da barra à esquerda. Mais informações sobre este modelo [aqui](https://github.com/3778/COVID-19#seir-bayes).
+O gráfico abaixo mostra o resultado da simulação da evolução de pacientes infectados para os parâmetros escolhidos no menu da barra à esquerda. Mais informações sobre este modelo [aqui](https://github.com/andrelnunes/COVID-19#seir-bayes).
 
 ### Previsão de infectados
 **(!) Importante**: Os resultados apresentados são *preliminares* e estão em fase de validação.
@@ -35,6 +35,12 @@ def make_SIMULATION_PARAMS(SEIR0, intervals, should_estimate_r0):
     txt = f'''
     ### Parâmetros da simulação
     - $SEIR(0) = ({S0}, {E0}, {I0}, {R0})$
+
+    Onde:
+    - S = Sucetíveis, pessoas que ainda não tiveram contato com o vírus.
+    - E = Expostos, pessoas que estão com o vírus em período de incubação.
+    - I = Infectados, pessoas que estão doentes e em fase de contágio.
+    - R = Removidos, pessoas que se já se recuperaram ou morreram.
 
     Os intervalos abaixo definem 95% do intervalo de confiança de uma distribuição LogNormal
     - $${alpha_inv_inf:.03} < T_{{incub}} = 1/\\alpha < {alpha_inv_sup:.03}$$
@@ -59,6 +65,8 @@ HOSPITAL_QUEUE_SIMULATION= '''
 ---
 
 ## Simulação de fila hospitalar
+
+O modelo de simulação de fila hospitalar visa projetar ocupação de leitos dos sistemas de saúde municipais ou estaduais como um todo, desconsiderando colapsos pontuais de hospitais. 
 
 A simulação do modelo de fila, pode levar alguns minutos.
 
@@ -103,6 +111,10 @@ DATA_SOURCES = '''
 r0_ESTIMATION_TITLE = '## Número de reprodução básico $R_{{0}}$'
 
 def r0_ESTIMATION(place, date): return  f'''
+O número de reprodução básico $R_{{0}}$ representa o número de casos secundários originados a partir de um caso primário.
+
+Um número de reprodução básico $R_{{0}}$ entre 0 e 1 indica declínio da doença.
+
 O valor do número de reprodução básico $R_{0}$ está sendo estimado com os dados históricos de {place}. Caso você queria especificar o valor manualmente, desabilite a opção acima e insira os valores desejados.
 
 **(!) Importante**: A estimação é sensível à qualidade das notificações dos casos positivos.
@@ -119,7 +131,7 @@ Utilize o menu à esquerda para configurar o parâmetro.
 '''
 
 r0_CITATION = '''
-A metodologia utilizada para estimação foi baseada no artigo [*Thompson, R. N., et al. "Improved inference of time-varying reproduction numbers during infectious disease outbreaks." Epidemics 29 (2019): 100356.*](https://www.sciencedirect.com/science/article/pii/S1755436519300350). O código da implementação pode ser encontrado [aqui](https://github.com/3778/COVID-19/blob/master/covid19/estimation.py).
+A metodologia utilizada para estimação foi baseada no artigo [*Thompson, R. N., et al. "Improved inference of time-varying reproduction numbers during infectious disease outbreaks." Epidemics 29 (2019): 100356.*](https://www.sciencedirect.com/science/article/pii/S1755436519300350). O código da implementação pode ser encontrado [aqui](https://github.com/andrelnunes/COVID-19/blob/master/simulator/covid19/estimation.py).
 '''
 
 def r0_NOT_ENOUGH_DATA(w_place, w_date): return f'''
