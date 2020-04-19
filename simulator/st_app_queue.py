@@ -238,9 +238,9 @@ def calculate_input_hospital_queue(model_output, sample_size, t_max, cases_df, p
     return df, cut_after
 
 
-@st.cache(suppress_st_warning=True)
 def run_queue_simulation_cached(dataset, cut_after, params_simulation, reported_rate, w_place):
 
+    @st.cache
     def run_simulation(execution_columnm, execution_description):
         df = dataset.copy()
         df = df.assign(hospitalizados=0)
