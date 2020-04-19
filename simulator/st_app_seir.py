@@ -34,9 +34,10 @@ def plot_EI(model_output, scale):
                                scale=scale, 
                                show_uncertainty=True)
 
-def make_EI_df(model, model_output, sample_size, date):
+@st.cache
+def make_EI_df(model_output, sample_size, t_max, date):
     _, E, I, R, t = model_output
-    size = sample_size*model.params['t_max']
+    size = sample_size*t_max
 
     NI = np.add(pd.DataFrame(I).apply(lambda x: x - x.shift(1)).values,
                 pd.DataFrame(R).apply(lambda x: x - x.shift(1)).values)
@@ -277,6 +278,35 @@ def make_param_widgets(NEIR0, reported_rate, r0_samples=None, defaults=DEFAULT_P
             'sample_size': sample_size,
             'NEIR0': (N, EIR0)}
 
+@st.cache
+def run_seir(w_date,
+             w_location,
+             cases_df,
+             population_df,
+             w_location_granulariy,
+             r0_samples,
+             w_params = DEFAULT_PARAMS,
+             sample_size = SAMPLE_SIZE,
+             reported_rate = None,
+             NEIR0 = None):
+
+    if not reported_rate:
+        reported_rate, cCFR = estimate_subnotification(cases_df,
+                                                    w_location,
+                                                    w_date,
+                                                    w_location_granulariy)
+    
+    if not NEIR0:
+        NEIR0 = make_NEIR0(cases_df, population_df, w_location, w_date, reported_rate)
+
+    reported_rate = reported_rate*100
+    r0_dist = r0_samples[:, -1]
+
+    model = SEIRBayes(**w_params, r0_dist=r0_dist)
+    model_output = model.sample(SAMPLE_SIZE)
+
+    return (model, model_output, sample_size, w_params['t_max']), reported_rate, NEIR0
+
 def build_seir(w_date,
                w_location,
                cases_df,
@@ -290,16 +320,22 @@ def build_seir(w_date,
                                                    w_location_granulariy)
     
     NEIR0 = make_NEIR0(cases_df, population_df, w_location, w_date, reported_rate)
-    
-    reported_rate = reported_rate*100
-    r0_dist = r0_samples[:, -1]
-
-    w_params = make_param_widgets(NEIR0,reported_rate)
+    w_params = make_param_widgets(NEIR0, reported_rate)
     sample_size = w_params.pop('sample_size')
-    model = SEIRBayes(**w_params, r0_dist=r0_dist)
 
-    model_output = model.sample(sample_size)
-    ei_df = make_EI_df(model, model_output, sample_size, w_date)
+    model_info, _, _ = run_seir(w_date,
+                                w_location,
+                                cases_df,
+                                population_df,
+                                w_location_granulariy,
+                                r0_samples,
+                                w_params = w_params,
+                                sample_size = sample_size,
+                                reported_rate = reported_rate)
+
+    model, model_output, _ , _ = model_info
+    r0_dist = r0_samples[:, -1] 
+    ei_df = make_EI_df(model_output, sample_size, w_params['t_max'], w_date)
     st.markdown(texts.MODEL_INTRO)
     st.write(texts.SEIRBAYES_DESC)
     w_scale = st.selectbox('Escala do eixo Y',

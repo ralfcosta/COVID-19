@@ -5,25 +5,51 @@ from st_utils import texts
 from st_utils.viz import plot_r0
 from models.reproduction_number import ReproductionNumber
 from models.reproduction_number import RNDefaults as rnd
-from dataprep.dataprep_rn import DataPrepRN
 
 SAMPLE_SIZE = 500
 
+def prepare_for_r0_estimation(df):
+    return (
+            df
+            ['newCases']
+            .asfreq('D')
+            .fillna(0)
+            .rename('incidence')
+            .reset_index()
+            .rename(columns={'date': 'dates'})
+            .set_index('dates')
+    )
 
+def load_incidence_by_location(cases_df, date, location, min_casest_th):
+
+    return (
+        cases_df
+        [location]
+        .query("totalCases > @min_casest_th")
+        .pipe(prepare_for_r0_estimation)
+        [:date]
+    )
+
+def load_incidence(cases_df):
+    return (cases_df
+            .stack(level=1)
+            .sum(axis=1)
+            .unstack(level=1))
+
+@st.cache
 def estimate_r0(w_date,
                 w_location,
                 cases_df):
     
-    incidence = DataPrepRN.load_incidence_by_location(cases_df,
-                                          w_date,
-                                          w_location,
-                                          rnd.MIN_CASES_TH)
-
+    incidence = load_incidence_by_location(cases_df,
+                                           w_date,
+                                           w_location,
+                                           rnd.MIN_CASES_TH)
 
     if len(incidence) < rnd.MIN_DAYS_r0_ESTIMATE:
         used_brazil = True
         incidence = (
-            DataPrepRN.load_incidence(cases_df)
+            load_incidence(cases_df)
             .pipe(prepare_for_r0_estimation)
             [:w_date]
         )
@@ -47,9 +73,9 @@ def build_r0(w_date,
              cases_df):
     
     st.markdown("# Número de reprodução básico")
-    r0_samples, used_brazil = estimate_r0(cases_df,
+    r0_samples, used_brazil = estimate_r0(w_date,
                                           w_location,
-                                          w_date)
+                                          cases_df)
 
     if used_brazil:
         st.write(texts.r0_NOT_ENOUGH_DATA(w_location, w_date))
