@@ -112,12 +112,14 @@ if __name__ == '__main__':
 
     if base_parameters['r0_model']:
         my_placeholder.markdown("")
+
         r0_samples, used_brasil = st_app_r0.build_r0(base_parameters['date'],
                                                      base_parameters["location"],
                                                      base_parameters["cases"])
     
     if base_parameters['seir_model']:
         my_placeholder.markdown("")
+
         if not base_parameters['r0_model']:
             r0_samples, _ = st_app_r0.estimate_r0(base_parameters['date'],
                                                   base_parameters["location"],
@@ -131,19 +133,24 @@ if __name__ == '__main__':
                                                             r0_samples)
     
     if base_parameters['queue_model']:
-        
+        my_placeholder.markdown("")
+
         if not base_parameters['seir_model']:
             
-            r0_samples, _ = st_app_r0.estimate_r0(w_date,
-                                                  w_location,
-                                                  cases_df)
-
-            seir_output, reported_rate = st_app_seir.build_seir(base_parameters['date'],
-                                                                base_parameters["location"],
-                                                                base_parameters["cases"],
-                                                                base_parameters["population"],
-                                                                base_parameters["location_granularity"],
-                                                                r0_samples)
+            r0_samples, _ = st_app_r0.estimate_r0(base_parameters['date'],
+                                                  base_parameters["location"],
+                                                  base_parameters["cases"])
+            r0_dist = r0_samples[:, -1]
+            seir_output, reported_rate, _ = st_app_seir.run_seir(base_parameters['date'],
+                                                                 base_parameters["location"],
+                                                                 base_parameters["cases"],
+                                                                 base_parameters["population"],
+                                                                 base_parameters["location_granularity"],
+                                                                 r0_dist,
+                                                                 w_params=st_app_seir.DEFAULT_PARAMS,
+                                                                 sample_size=st_app_seir.SAMPLE_SIZE,
+                                                                 reported_rate=None,
+                                                                 NEIR0=None)
 
         st_app_queue.build_queue_simulator(base_parameters['date'],
                                            base_parameters["location"],

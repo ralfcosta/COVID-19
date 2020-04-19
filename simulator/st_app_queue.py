@@ -162,7 +162,7 @@ def make_param_widgets_hospital_queue(location, w_granularity, defaults=DEFAULT_
         confirm_admin_rate = DEFAULT_PARAMS['confirm_admin_rate']*100
         los_covid = DEFAULT_PARAMS['length_of_stay_covid']
         los_covid_icu = DEFAULT_PARAMS['length_of_stay_covid_uti']
-        icu_rate = DEFAULT_PARAMS['icu_death_rate']
+        icu_rate = DEFAULT_PARAMS['icu_rate']
         icu_death_rate = DEFAULT_PARAMS['icu_death_rate']
         icu_queue_death_rate = DEFAULT_PARAMS['icu_queue_death_rate']
         queue_death_rate = DEFAULT_PARAMS['queue_death_rate']
@@ -187,8 +187,9 @@ def make_param_widgets_hospital_queue(location, w_granularity, defaults=DEFAULT_
             "available_rate": available_rate,
             "available_rate_icu": available_rate_icu}
 
+@st.cache(suppress_st_warning=True)
 def calculate_input_hospital_queue(model_output, sample_size, t_max, cases_df, place, date):
-
+    print("Passei calculate_input_hospital_queue!")
     S, E, I, R, t = model_output
     
     previous_cases = cases_df[place]
@@ -236,6 +237,38 @@ def calculate_input_hospital_queue(model_output, sample_size, t_max, cases_df, p
 
     return df, cut_after
 
+
+@st.cache(suppress_st_warning=True)
+def run_queue_simulation_cached(dataset, cut_after, params_simulation, reported_rate, w_place):
+
+    def run_simulation(execution_columnm, execution_description):
+        df = dataset.copy()
+        df = df.assign(hospitalizados=0)
+
+        for idx, row in df.iterrows():
+
+            if idx < cut_after:
+                df['hospitalizados'].iloc[idx] = round(df[execution_columnm].iloc[idx] * params_simulation['confirm_admin_rate']/reported_rate)
+            else:
+                df['hospitalizados'].iloc[idx] = round(df[execution_columnm].iloc[idx] * (params_simulation['confirm_admin_rate']/100))
+
+        bar_text = st.empty()
+        bar = st.progress(0)
+
+        bar_text.text(f'Processando o cenário {execution_description.lower()}...')
+        simulation_output = (run_queue_simulation(df, bar, bar_text, params_simulation)
+            .join(df, how='inner'))
+
+        bar.progress(1.)
+        bar_text.text(f"Processamento do cenário {execution_description.lower()} finalizado.")
+
+        return simulation_output
+
+    return [('newly_infected_lower', 'Otimista', run_simulation('newly_infected_lower', 'Otimista')),
+            ('newly_infected_mean', 'Médio', run_simulation('newly_infected_mean', 'Médio')),
+            ('newly_infected_upper', 'Pessimista', run_simulation('newly_infected_upper', 'Pessimista'))]
+
+
 def run_queue_model(model_output, 
                     sample_size,
                     t_max,
@@ -247,7 +280,7 @@ def run_queue_model(model_output,
 
         bar_text = st.empty()
         bar_text.text('Estimando crecscimento de infectados...')
-        simulations_outputs = []
+        
 
         dataset, cut_after = calculate_input_hospital_queue(model_output,
                                                             sample_size,
@@ -255,34 +288,8 @@ def run_queue_model(model_output,
                                                             cases_df,
                                                             w_place,
                                                             w_date)
-        
-        for execution_columnm, execution_description in [('newly_infected_lower', 'Otimista'),
-                                                         ('newly_infected_mean', 'Médio'),
-                                                         ('newly_infected_upper', 'Pessimista')]:
 
-            # TODO bug:review order of magnitude of all parameters (make sure it is consistant)
-
-            dataset = dataset.assign(hospitalizados=0)
-
-            for idx, row in dataset.iterrows():
-
-                if idx < cut_after:
-                    dataset['hospitalizados'].iloc[idx] = round(dataset[execution_columnm].iloc[idx] * params_simulation['confirm_admin_rate']/reported_rate)
-                else:
-                    dataset['hospitalizados'].iloc[idx] = round(dataset[execution_columnm].iloc[idx] * (params_simulation['confirm_admin_rate']/100))
-
-            bar_text = st.empty()
-            bar = st.progress(0)
-
-            bar_text.text(f'Processando o cenário {execution_description.lower()}...')
-            simulation_output = (run_queue_simulation(dataset, bar, bar_text, params_simulation)
-                .join(dataset, how='inner'))
-
-            simulations_outputs.append((execution_columnm, execution_description, simulation_output))
-
-            bar.progress(1.)
-            bar_text.text(f"Processamento do cenário {execution_description.lower()} finalizado.")
-
+        simulations_outputs = run_queue_simulation_cached(dataset, cut_after, params_simulation, reported_rate, w_place)
         return simulations_outputs, cut_after
 
 def build_queue_simulator(w_date,
@@ -294,7 +301,7 @@ def build_queue_simulator(w_date,
 
     st.markdown(texts.HOSPITAL_QUEUE_SIMULATION)
     
-    model_output, sample_size, t_max = seir_output
+    _, model_output, sample_size, t_max = seir_output
     params_simulation = make_param_widgets_hospital_queue(w_location, w_location_granulariy)
 
     simulation_outputs, cut_after = run_queue_model(model_output,
@@ -305,7 +312,7 @@ def build_queue_simulator(w_date,
                                                     w_location,
                                                     w_date,
                                                     params_simulation)
-
+    
     st.markdown(texts.HOSPITAL_GRAPH_DESCRIPTION)
     st.markdown(texts.HOSPITAL_BREAKDOWN_DESCRIPTION)
 

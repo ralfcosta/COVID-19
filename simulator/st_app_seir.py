@@ -18,13 +18,13 @@ MIN_DATA_BRAZIL = '2020-03-26'
 FATAL_RATE_BASELINE = 0.0138 #Verity R, Okell LC, Dorigatti I et al. Estimates of the severity of covid-19 disease. medRxiv 2020.
 
 SAMPLE_SIZE = 300
-T_MAX = 180
 
 DEFAULT_PARAMS = {
     'fator_subr': 10,
     'gamma_inv_dist': (7.0, 14.0, 0.95, 'lognorm'),
     'alpha_inv_dist': (4.1, 7.0, 0.95, 'lognorm'),
-    'r0_dist': (2.5, 6.0, 0.95, 'lognorm')
+    'r0_dist': (2.5, 6.0, 0.95, 'lognorm'),
+    't_max': 180
 }
 
 def plot_EI(model_output, scale):
@@ -264,12 +264,12 @@ def make_param_widgets(NEIR0, reported_rate, r0_samples=None, defaults=DEFAULT_P
     if st.sidebar.checkbox('Parâmetros gerais'):
         t_max = st.sidebar.number_input('Período de simulação em dias (t_max)',
                                         min_value=1, max_value=8*30, step=15,
-                                        value=T_MAX)
+                                        value=defaults['t_max'])
         sample_size = st.sidebar.number_input('Qtde. de iterações da simulação (runs)',
             min_value=1, max_value=3000, step=100,
             value=SAMPLE_SIZE)
     else:
-        t_max, sample_size = 180, 300
+        t_max, sample_size = defaults['t_max'], 300
 
     return {'fator_subr': fator_subr,
             'alpha_inv_dist': (alpha_inf, alpha_sup, interval_density, family),
@@ -284,7 +284,7 @@ def run_seir(w_date,
              cases_df,
              population_df,
              w_location_granulariy,
-             r0_samples,
+             r0_dist,
              w_params = DEFAULT_PARAMS,
              sample_size = SAMPLE_SIZE,
              reported_rate = None,
@@ -300,10 +300,16 @@ def run_seir(w_date,
         NEIR0 = make_NEIR0(cases_df, population_df, w_location, w_date, reported_rate)
 
     reported_rate = reported_rate*100
-    r0_dist = r0_samples[:, -1]
+    w_params['r0_dist'] = r0_dist
 
-    model = SEIRBayes(**w_params, r0_dist=r0_dist)
-    model_output = model.sample(SAMPLE_SIZE)
+    model = SEIRBayes(NEIR0,
+                      w_params['r0_dist'],
+                      w_params['gamma_inv_dist'],
+                      w_params['alpha_inv_dist'],
+                      w_params['fator_subr'],
+                      w_params['t_max'])
+
+    model_output = model.sample(sample_size)
 
     return (model, model_output, sample_size, w_params['t_max']), reported_rate, NEIR0
 
@@ -322,19 +328,20 @@ def build_seir(w_date,
     NEIR0 = make_NEIR0(cases_df, population_df, w_location, w_date, reported_rate)
     w_params = make_param_widgets(NEIR0, reported_rate)
     sample_size = w_params.pop('sample_size')
+    r0_dist = r0_samples[:, -1] 
 
     model_info, _, _ = run_seir(w_date,
                                 w_location,
                                 cases_df,
                                 population_df,
                                 w_location_granulariy,
-                                r0_samples,
+                                r0_dist,
                                 w_params = w_params,
                                 sample_size = sample_size,
                                 reported_rate = reported_rate)
 
     model, model_output, _ , _ = model_info
-    r0_dist = r0_samples[:, -1] 
+    
     ei_df = make_EI_df(model_output, sample_size, w_params['t_max'], w_date)
     st.markdown(texts.MODEL_INTRO)
     st.write(texts.SEIRBAYES_DESC)
