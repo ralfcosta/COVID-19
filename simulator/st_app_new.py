@@ -1,5 +1,4 @@
 import streamlit as st
-import texts_new
 from st_utils import texts
 from covid19 import data
 
@@ -46,13 +45,13 @@ def create_basic_sidebar():
                 .index
                 .strftime('%Y-%m-%d'))
 
-    st.sidebar.markdown(texts_new.INTRODUCTION_SIDEBAR)
+    st.sidebar.markdown(texts.INTRODUCTION_SIDEBAR)
 
-    w_r0_model = st.sidebar.checkbox(texts_new.R0_MODEL_DESC)
-    w_seir_model = st.sidebar.checkbox(texts_new.SEIR_MODEL_DESC)
-    w_queue_model = st.sidebar.checkbox(texts_new.QUEUE_MODEL_DESC)
+    w_r0_model = st.sidebar.checkbox(texts.R0_MODEL_DESC)
+    w_seir_model = st.sidebar.checkbox(texts.SEIR_MODEL_DESC)
+    w_queue_model = st.sidebar.checkbox(texts.QUEUE_MODEL_DESC)
     
-    st.sidebar.markdown(texts_new.BASE_PARAMETERS_DESCRIPTION)
+    st.sidebar.markdown(texts.BASE_PARAMETERS_DESCRIPTION)
 
     st.sidebar.markdown("**Parâmetro de UF/Município**")
     st.sidebar.markdown("Unidade")
@@ -107,24 +106,23 @@ def create_basic_sidebar():
 if __name__ == '__main__':
 
     my_placeholder = st.empty()
-    my_placeholder.markdown(texts_new.INTRODUCTION)
+    my_placeholder.markdown(texts.INTRODUCTION)
 
     base_parameters = create_basic_sidebar()
 
     if base_parameters['r0_model']:
-        my_placeholder.markdown("# Número de reprodução básico")
+        my_placeholder.markdown("")
         r0_samples, used_brasil = st_app_r0.build_r0(base_parameters['date'],
                                                      base_parameters["location"],
                                                      base_parameters["cases"])
     
     if base_parameters['seir_model']:
-        
+        my_placeholder.markdown("")
         if not base_parameters['r0_model']:
-            my_placeholder.markdown("# Número de reprodução básico")
-            r0_samples, _ = st_app_r0.build_r0(base_parameters['date'],
-                                                         base_parameters["location"],
-                                                         base_parameters["cases"])
-
+            r0_samples, _ = st_app_r0.estimate_r0(base_parameters['date'],
+                                                  base_parameters["location"],
+                                                  base_parameters["cases"])
+    
         seir_output, reported_rate = st_app_seir.build_seir(base_parameters['date'],
                                                             base_parameters["location"],
                                                             base_parameters["cases"],
@@ -135,11 +133,10 @@ if __name__ == '__main__':
     if base_parameters['queue_model']:
         
         if not base_parameters['seir_model']:
-
-            my_placeholder.markdown("# Número de reprodução básico")
-            r0_samples, _ = st_app_r0.build_r0(base_parameters['date'],
-                                               base_parameters["location"],
-                                               base_parameters["cases"])
+            
+            r0_samples, _ = st_app_r0.estimate_r0(w_date,
+                                                  w_location,
+                                                  cases_df)
 
             seir_output, reported_rate = st_app_seir.build_seir(base_parameters['date'],
                                                                 base_parameters["location"],
