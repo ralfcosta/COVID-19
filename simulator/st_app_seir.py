@@ -15,7 +15,7 @@ from st_utils.viz import prep_tidy_data_to_plot, make_combined_chart, plot_r0
 
 MIN_DEATH_SUBN = 3
 MIN_DATA_BRAZIL = '2020-03-26'
-FATAL_RATE_BASELINE = 0.0138 #Verity R, Okell LC, Dorigatti I et al. Estimates of the severity of covid-19 disease. medRxiv 2020.
+FATAL_RATE_BASELINE = 0.00657 #Verity R, Okell LC, Dorigatti I et al. Estimates of the severity of covid-19 disease. medRxiv 2020.
 
 SAMPLE_SIZE = 300
 
@@ -27,9 +27,9 @@ DEFAULT_PARAMS = {
     't_max': 180
 }
 
-def plot_EI(model_output, scale):
+def plot_EI(model_output, scale, start_date):
     _, E, I, _, t = model_output
-    source = prep_tidy_data_to_plot(E, I, t)
+    source = prep_tidy_data_to_plot(E, I, t, start_date)
     return make_combined_chart(source, 
                                scale=scale, 
                                show_uncertainty=True)
@@ -348,7 +348,7 @@ def build_seir(w_date,
     w_scale = st.selectbox('Escala do eixo Y',
                            ['log', 'linear'],
                            index=1)
-    fig = plot_EI(model_output, w_scale)
+    fig = plot_EI(model_output, w_scale,w_date)
     st.altair_chart(fig)
 
     download_placeholder = st.empty()
