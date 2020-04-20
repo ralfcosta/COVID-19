@@ -243,7 +243,7 @@ def calculate_input_hospital_queue(model_output, sample_size, t_max, cases_df, p
 def run_queue_simulation_cached(dataset, cut_after, params_simulation, reported_rate, w_place):
 
     @st.cache(suppress_st_warning=True)
-    def run_simulation(execution_columnm, execution_description):
+    def run_simulation(dataset, execution_columnm, execution_description):
         df = dataset.copy()
         df = df.assign(hospitalizados=0)
 
@@ -266,9 +266,9 @@ def run_queue_simulation_cached(dataset, cut_after, params_simulation, reported_
 
         return simulation_output
 
-    return [('newly_infected_lower', 'Otimista', run_simulation('newly_infected_lower', 'Otimista')),
-            ('newly_infected_mean', 'Médio', run_simulation('newly_infected_mean', 'Médio')),
-            ('newly_infected_upper', 'Pessimista', run_simulation('newly_infected_upper', 'Pessimista'))]
+    return [('newly_infected_lower', 'Otimista', run_simulation(dataset, 'newly_infected_lower', 'Otimista')),
+            ('newly_infected_mean', 'Médio', run_simulation(dataset,'newly_infected_mean', 'Médio')),
+            ('newly_infected_upper', 'Pessimista', run_simulation(dataset,'newly_infected_upper', 'Pessimista'))]
 
 
 def run_queue_model(model_output, 
