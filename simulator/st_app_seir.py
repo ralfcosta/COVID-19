@@ -290,18 +290,18 @@ def run_seir(w_date,
              reported_rate = None,
              NEIR0 = None):
 
-    if not reported_rate:
+    if reported_rate is None:
         reported_rate, cCFR = estimate_subnotification(cases_df,
                                                     w_location,
                                                     w_date,
                                                     w_location_granulariy)
         reported_rate = reported_rate*100
+        w_params['fator_subr'] = reported_rate
 
-    if not NEIR0:
+    if NEIR0 is None:
         NEIR0 = make_NEIR0(cases_df, population_df, w_location, w_date, reported_rate)
 
     w_params['r0_dist'] = r0_dist
-
     model = SEIRBayes(NEIR0,
                       w_params['r0_dist'],
                       w_params['gamma_inv_dist'],
