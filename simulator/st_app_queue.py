@@ -192,7 +192,6 @@ def make_param_widgets_hospital_queue(location, w_granularity, defaults=DEFAULT_
 
 @st.cache(suppress_st_warning=True)
 def calculate_input_hospital_queue(model_output, sample_size, t_max, cases_df, place, date):
-    print("Passei calculate_input_hospital_queue!")
     S, E, I, R, t = model_output
     
     previous_cases = cases_df[place]
@@ -243,7 +242,7 @@ def calculate_input_hospital_queue(model_output, sample_size, t_max, cases_df, p
 
 def run_queue_simulation_cached(dataset, cut_after, params_simulation, reported_rate, w_place):
 
-    @st.cache
+    @st.cache(suppress_st_warning=True)
     def run_simulation(execution_columnm, execution_description):
         df = dataset.copy()
         df = df.assign(hospitalizados=0)

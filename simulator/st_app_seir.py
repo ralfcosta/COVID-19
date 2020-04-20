@@ -295,11 +295,11 @@ def run_seir(w_date,
                                                     w_location,
                                                     w_date,
                                                     w_location_granulariy)
-    
+        reported_rate = reported_rate*100
+
     if not NEIR0:
         NEIR0 = make_NEIR0(cases_df, population_df, w_location, w_date, reported_rate)
 
-    reported_rate = reported_rate*100
     w_params['r0_dist'] = r0_dist
 
     model = SEIRBayes(NEIR0,
@@ -324,8 +324,9 @@ def build_seir(w_date,
                                                    w_location,
                                                    w_date,
                                                    w_location_granulariy)
-    
     NEIR0 = make_NEIR0(cases_df, population_df, w_location, w_date, reported_rate)
+    reported_rate = reported_rate * 100
+
     w_params = make_param_widgets(NEIR0, reported_rate)
     sample_size = w_params.pop('sample_size')
     r0_dist = r0_samples[:, -1] 
@@ -338,7 +339,8 @@ def build_seir(w_date,
                                 r0_dist,
                                 w_params = w_params,
                                 sample_size = sample_size,
-                                reported_rate = reported_rate)
+                                reported_rate = w_params['fator_subr'],
+                                NEIR0=NEIR0)
 
     model, model_output, _ , _ = model_info
     
@@ -366,4 +368,4 @@ def build_seir(w_date,
     st.markdown(texts.make_SIMULATION_PARAMS(SEIR0, dists, True))
     st.markdown("---")
 
-    return (model_output, sample_size, w_params['t_max']), reported_rate
+    return (model, model_output, sample_size, w_params['t_max']), reported_rate
