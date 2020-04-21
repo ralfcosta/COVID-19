@@ -19,7 +19,7 @@ Para simular outros cenários, altere um parâmetro e tecle **Enter**. O novo re
 '''
 
 MODEL_INTRO='''
-## Modelo SEIR-Bayes
+# Modelo SEIR-Bayes
 O gráfico abaixo mostra o resultado da simulação da evolução de pacientes infectados para os parâmetros escolhidos no menu da barra à esquerda. Mais informações sobre este modelo [aqui](https://github.com/andrelnunes/COVID-19#seir-bayes).
 
 ### Previsão de infectados
@@ -40,12 +40,6 @@ def make_SIMULATION_PARAMS(SEIR0, intervals, should_estimate_r0):
     txt = f'''
     ### Parâmetros da simulação
     - $SEIR(0) = ({S0}, {E0}, {I0}, {R0})$
-
-    Onde:
-    - S = Sucetíveis, pessoas que ainda não tiveram contato com o vírus.
-    - E = Expostos, pessoas que estão com o vírus em período de incubação.
-    - I = Infectados, pessoas que estão doentes e em fase de contágio.
-    - R = Removidos, pessoas que se já se recuperaram ou morreram.
 
     Os intervalos abaixo definem 95% do intervalo de confiança de uma distribuição LogNormal
     - $${alpha_inv_inf:.03} < T_{{incub}} = 1/\\alpha < {alpha_inv_sup:.03}$$
@@ -82,13 +76,16 @@ Caso queira alterar essa simulação, habilite-a no menu da barra à esquerda.
 '''
 
 HOSPITAL_QUEUE_SIMULATION= '''
----
 
-## Simulação de fila hospitalar
-
-O modelo de simulação de fila hospitalar visa projetar ocupação de leitos dos sistemas de saúde municipais ou estaduais como um todo, desconsiderando colapsos pontuais de hospitais. 
+# Simulação de fila hospitalar
 
 A simulação do modelo de fila, pode levar alguns minutos.
+
+**(!) Importante**: Os resultados apresentados são preliminares e estão em fase de validação.
+
+São definidas as condições listadas no menu à esquera para o dia 0.
+Unidade, data e demais parâmetros podem ser ajustados conforme desejado.
+O sistema é considerado colapsado quando há formação de filas, consequente da lotação dos leitos.
 
 '''
 
@@ -96,16 +93,6 @@ HOSPITAL_QUEUE_INFO= '''
 ### Modelamento do Sistema de Saúde Municipal
 
 Os resultados abaixo apresentam a evolução do sistema de saúde do município de acordo com uma simulação simplificada fundamentada em teoria de filas. Mais informações sobre esse modelo [aqui] (https://github.com/andrelnunes/COVID-19).
-'''
-
-HOSPITAL_GRAPH_DESCRIPTION= '''
-### Previsão de Colapso:
-
-**(!) Importante**: Os resultados apresentados são preliminares e estão em fase de validação.
-
-São definidas as condições listadas no menu à esquera para o dia 0.
-Unidade, data e demais parâmetros podem ser ajustados conforme desejado.
-O sistema é considerado colapsado quando há formação de filas, consequente da lotação dos leitos.
 '''
 
 HOSPITAL_BREAKDOWN_DESCRIPTION= '''
@@ -120,7 +107,7 @@ Os colapsos foram estimados para três cenários executados com base nos resulta
 '''
 
 DATA_SOURCES = '''
----
+
 ### Fontes dos dados
 
 * Casos confirmados por município: [Número de casos confirmados de COVID-19 no Brasil](https://raw.githubusercontent.com/wcota/covid19br/master/cases-brazil-cities-time.csv) (de https://github.com/wcota/covid19br)
@@ -130,16 +117,13 @@ DATA_SOURCES = '''
 
 r0_ESTIMATION_TITLE = '## Número de reprodução básico $R_{{0}}$'
 
-def r0_ESTIMATION(place, date): return  f'''
-O número de reprodução básico $R_{{0}}$ representa o número de casos secundários originados a partir de um caso primário.
-
-Um número de reprodução básico $R_{{0}}$ entre 0 e 1 indica declínio da doença.
-
-O valor do número de reprodução básico $R_{0}$ está sendo estimado com os dados históricos de {place}. 
-
+r0_WARNING = '''
 **(!) Importante**: A estimação é sensível à qualidade das notificações dos casos positivos.
+'''
 
-O $R_{{0}}$ utilizado no modelo SEIR-Bayes é o do dia {date}, que é o mais recente.
+
+O valor do número de reprodução básico $R_{0}$ está sendo estimado com os dados históricos de {place} com dados de {date}.
+
 '''
 
 SEIRBAYES_DESC = '''

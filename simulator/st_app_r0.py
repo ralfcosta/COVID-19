@@ -83,12 +83,13 @@ def build_r0(w_date,
     else:
         location =  w_location
 
-    st.markdown(texts.r0_ESTIMATION(location, w_date))                      
+    st.markdown(texts.r0_WARNING)
     st.altair_chart(plot_r0(r0_samples,
                             w_date, 
                             location,
                             rnd.MIN_DAYS_r0_ESTIMATE))
 
+    st.markdown(texts.r0_ESTIMATION(location, w_date))
     r0_dist = r0_samples[:, -1]
     st.markdown(f'**O $R_{{0}}$ estimado está entre '
                 f'${np.quantile(r0_dist, 0.01):.03}$ e ${np.quantile(r0_dist, 0.99):.03}$**')
