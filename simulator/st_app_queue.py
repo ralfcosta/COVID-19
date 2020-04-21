@@ -285,16 +285,15 @@ def run_queue_model(model_output,
                     w_date,
                     params_simulation):
 
-        bar_text = st.empty()
-        bar_text.text('Estimando crecscimento de infectados...')
-        
 
-        dataset, cut_after = calculate_input_hospital_queue(model_output,
-                                                            sample_size,
-                                                            t_max,
-                                                            cases_df,
-                                                            w_place,
-                                                            w_date)
+        
+        with st.spinner("Estimando crecscimento de infectados...."):
+            dataset, cut_after = calculate_input_hospital_queue(model_output,
+                                                                sample_size,
+                                                                t_max,
+                                                                cases_df,
+                                                                w_place,
+                                                                w_date)
 
         simulations_outputs = run_queue_simulation_cached(dataset, cut_after, params_simulation, reported_rate, w_place)
         return simulations_outputs, cut_after
@@ -320,7 +319,6 @@ def build_queue_simulator(w_date,
                                                     w_date,
                                                     params_simulation)
     
-    st.markdown(texts.HOSPITAL_GRAPH_DESCRIPTION)
     st.markdown(texts.HOSPITAL_BREAKDOWN_DESCRIPTION)
 
     def get_breakdown(description, simulation_output):
