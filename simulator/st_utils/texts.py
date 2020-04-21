@@ -65,6 +65,21 @@ Baseado na seleção anterior, é possível selecionar uma unidade da federaçã
 Também podem ser ajustados limites superior e inferior dos parâmetros *Período infeccioso*, *Tempo de incubação* e *Número básico de reprodução*. Estes limites definem um intervalo de confiança de 95% de uma distribuição log-normal para cada parâmetro.\n\n\n
 '''
 
+SEIR_SIMULATION_SOURCE_EXPLAIN= '''
+---
+A Previsão de Infectados necessita do **Número de Básico de Reprodução**, que é calculado com base nos dias mais recentes.
+
+Caso queira ver a evolução do Número Básico de Reprodução ao longo do tempo, habilite-o no menu à esquerda.
+
+Caso queira utilizar valores personalizados para este parâmetro, ative a caixa de confirmação abaixo.
+'''
+
+QUEUE_SIMULATION_SOURCE_EXPLAIN= '''
+---
+A Simulação de Fila Hospitalar é feita com base da **Previsão de Infectados**.
+
+Caso queira alterar essa simulação, habilite-a no menu da barra à esquerda.
+'''
 
 HOSPITAL_QUEUE_SIMULATION= '''
 ---
@@ -98,9 +113,9 @@ HOSPITAL_BREAKDOWN_DESCRIPTION= '''
 
 Os colapsos foram estimados para três cenários executados com base nos resultados do SEIR:
 
-- Cenário *Otimista*: utilizando o valor médio de novos infectados menos o desvio padrão das execuções do modelo SEIR.
-- Cenário *Médio*: utilizando o valor médio de novos infectados das execuções do modelo SEIR.
-- Cenário *Pessimista*: utilizando o valor médio de novos infectados mais o desvio padrão das execuções do modelo SEIR.
+- **Cenário Otimista**: utilizando o valor médio de novos infectados menos o desvio padrão das execuções do modelo SEIR.
+- **Cenário **Médio**: utilizando o valor médio de novos infectados das execuções do modelo SEIR.
+- **Cenário **Pessimista**: utilizando o valor médio de novos infectados mais o desvio padrão das execuções do modelo SEIR.
 
 '''
 
@@ -120,7 +135,7 @@ O número de reprodução básico $R_{{0}}$ representa o número de casos secund
 
 Um número de reprodução básico $R_{{0}}$ entre 0 e 1 indica declínio da doença.
 
-O valor do número de reprodução básico $R_{0}$ está sendo estimado com os dados históricos de {place}. Caso você queria especificar o valor manualmente, desabilite a opção acima e insira os valores desejados.
+O valor do número de reprodução básico $R_{0}$ está sendo estimado com os dados históricos de {place}. 
 
 **(!) Importante**: A estimação é sensível à qualidade das notificações dos casos positivos.
 
