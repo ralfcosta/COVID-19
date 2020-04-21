@@ -54,7 +54,6 @@ def create_basic_sidebar():
     st.sidebar.markdown(texts.BASE_PARAMETERS_DESCRIPTION)
 
     st.sidebar.markdown("**Parâmetro de UF/Município**")
-    st.sidebar.markdown("Unidade")
     
     w_location_granularity = st.sidebar.radio(
         "Unidade",
@@ -93,7 +92,7 @@ def create_basic_sidebar():
                                   options=options_date,
                                   index=len(options_date)-1,
                                   format_func=format_date)
-    
+
     return {"location_granularity": w_location_granularity,
             "date": w_date,
             "location": w_location,

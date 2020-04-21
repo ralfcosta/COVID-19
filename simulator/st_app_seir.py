@@ -215,25 +215,26 @@ def make_param_widgets(NEIR0, reported_rate, r0_samples=None, defaults=DEFAULT_P
     family = 'lognorm'
 
     st.sidebar.markdown("---")
-    if st.sidebar.checkbox('Condições iniciais'):
+    st.sidebar.markdown("**Parâmetro Previsão de infectados**")
+    if st.sidebar.checkbox('Parâmetros de infecção'):
         
         fator_subr = st.sidebar.number_input(
             ('Taxa de reportagem de infectados (%)'),
             min_value=0.0, max_value=100.0, step=1.0,
             value=reported_rate)
 
-        N = st.sidebar.number_input('População total (N)',
-                                    min_value=0, max_value=1_000_000_000, step=500_000,
-                                    value=_N0)
-
         EIR0 = st.sidebar.number_input('Indivíduos que já foram infectados e confirmados',
                                 min_value=0, max_value=1_000_000_000,
                                 value=_EIR0)
+
+        N = st.sidebar.number_input('População total (N)',
+                                    min_value=0, max_value=1_000_000_000, step=500_000,
+                                    value=_N0)
+        
     else:
         fator_subr, N, EIR0 = reported_rate, _N0, _EIR0
 
-    st.sidebar.markdown("---")
-    if st.sidebar.checkbox('Período de infecção (1/γ) e tempo incubação (1/α)') :
+    if st.sidebar.checkbox('Parâmetros avançados', key='checkbox_parameters_seir'):
 
         gamma_inf = st.sidebar.number_input(
                 'Limite inferior do período infeccioso médio em dias (1/γ)',
@@ -254,14 +255,7 @@ def make_param_widgets(NEIR0, reported_rate, r0_samples=None, defaults=DEFAULT_P
                 'Limite superior do tempo de incubação médio em dias (1/α)',
                 min_value=0.1, max_value=60.0, step=1.0,
                 value=defaults['alpha_inv_dist'][1])
-    else:
-        gamma_inf, gamma_sup, alpha_inf, alpha_sup = (defaults['gamma_inv_dist'][0],
-                                                      defaults['gamma_inv_dist'][1],
-                                                      defaults['alpha_inv_dist'][0],
-                                                      defaults['alpha_inv_dist'][1])
-    
-    st.sidebar.markdown("---")
-    if st.sidebar.checkbox('Parâmetros gerais'):
+        
         t_max = st.sidebar.number_input('Período de simulação em dias (t_max)',
                                         min_value=1, max_value=8*30, step=15,
                                         value=defaults['t_max'])
@@ -269,6 +263,10 @@ def make_param_widgets(NEIR0, reported_rate, r0_samples=None, defaults=DEFAULT_P
             min_value=1, max_value=3000, step=100,
             value=SAMPLE_SIZE)
     else:
+        gamma_inf, gamma_sup, alpha_inf, alpha_sup = (defaults['gamma_inv_dist'][0],
+                                                      defaults['gamma_inv_dist'][1],
+                                                      defaults['alpha_inv_dist'][0],
+                                                      defaults['alpha_inv_dist'][1])
         t_max, sample_size = defaults['t_max'], 300
 
     return {'fator_subr': fator_subr,
@@ -292,9 +290,9 @@ def run_seir(w_date,
 
     if reported_rate is None:
         reported_rate, cCFR = estimate_subnotification(cases_df,
-                                                    w_location,
-                                                    w_date,
-                                                    w_location_granulariy)
+                                                       w_location,
+                                                       w_date,
+                                                       w_location_granulariy)
         reported_rate = reported_rate*100
         w_params['fator_subr'] = reported_rate
 

@@ -2,10 +2,15 @@ INTRODUCTION = '''
 # COVID-19-BR
 O objetivo deste projeto é iniciar uma força tarefa conjunta da comunidade científica e tecnológica a fim de criar modelos de previsão de infectados (e talvez outras métricas) pelo COVID-19, focando no Brasil. O projeto é público e pode ser usado por todos.
 
-#### Para dúvidas e contribuições, entre em contato por [email](mailto:covid19br.site@gmail.com?subject=[Dúvidas%20e%20Contribuições]%20Modelos%20COVID19).
+No menu da barra à esquerda, selecione as projeções que deseja visualizar e altere os parâmetros para simular diferentes cenários.
 
+#### Para dúvidas e contribuições, entre em contato por [email](mailto:covid19br.site@gmail.com?subject=[Dúvidas%20e%20Contribuições]%20Modelos%20COVID19).
 ---
 '''
+
+# INTRODUCTION = '''
+# No menu da barra à esquerda, selecione as projeções que deseja visualizar e altere os parâmetros para simular diferentes cenários.
+# '''
 
 PARAMETER_SELECTION='''
 # Seleção de parâmetros
@@ -157,8 +162,4 @@ BASE_PARAMETERS_DESCRIPTION = '''
 Para outros cenários, alterer um parâmetro e tecle **Enter**. O novo resultado será calculado e apresentado automaticamente.
 
 ---
-'''
-
-INTRODUCTION = '''
-No menu da barra à esquerda, selecione as projeções que deseja visualizar e altere os parâmetros para simular diferentes cenários.
 '''

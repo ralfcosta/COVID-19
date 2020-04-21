@@ -76,8 +76,43 @@ def make_param_widgets_hospital_queue(location, w_granularity, defaults=DEFAULT_
         confirm_admin_rate = data.city_hospitalization(city,uf)
 
     st.sidebar.markdown('---')
+    st.sidebar.markdown("**Parâmetro de simulação hospitalar**")
 
-    if st.sidebar.checkbox('Parâmetros da simulação hospitalar'):
+    if st.sidebar.checkbox('Parâmetros básicos'):
+        total_beds = st.sidebar.number_input(
+                'Quantidade de leitos',
+                step=1,
+                min_value=0,
+                max_value=int(1e7),
+                value=int(qtd_beds))
+            
+        total_beds_icu = st.sidebar.number_input(
+                'Quantidade de leitos de UTI',
+                step=1,
+                min_value=0,
+                max_value=int(1e7),
+                value=int(qtd_beds_uci))
+
+        available_rate = st.sidebar.number_input(
+                'Proporção de leitos disponíveis',
+                step=.1,
+                min_value=.0,
+                max_value=1.,
+                value=DEFAULT_PARAMS['available_rate'])
+
+        available_rate_icu = st.sidebar.number_input(
+                'Proporção de leitos de UTI disponíveis',
+                step=.1,
+                min_value=.0,
+                max_value=1.,
+                value=DEFAULT_PARAMS['available_rate_icu'])
+    else:
+        total_beds = int(qtd_beds)
+        total_beds_icu = int(qtd_beds_uci)
+        available_rate = DEFAULT_PARAMS['available_rate']
+        available_rate_icu = DEFAULT_PARAMS['available_rate_icu']
+
+    if st.sidebar.checkbox('Parâmetros avançados', key='checkbox_parameters_queue'):
         confirm_admin_rate = st.sidebar.number_input(
                 'Porcentagem de confirmados que são hospitalizados (%)',
                 step=1.0,
@@ -134,33 +169,7 @@ def make_param_widgets_hospital_queue(location, w_granularity, defaults=DEFAULT_
                 max_value=1.,
                 value=DEFAULT_PARAMS['icu_rate_after_bed'])
         
-        total_beds = st.sidebar.number_input(
-                'Quantidade de leitos',
-                step=1,
-                min_value=0,
-                max_value=int(1e7),
-                value=int(qtd_beds))
-            
-        total_beds_icu = st.sidebar.number_input(
-                'Quantidade de leitos de UTI',
-                step=1,
-                min_value=0,
-                max_value=int(1e7),
-                value=int(qtd_beds_uci))
-
-        available_rate = st.sidebar.number_input(
-                'Proporção de leitos disponíveis',
-                step=.1,
-                min_value=.0,
-                max_value=1.,
-                value=DEFAULT_PARAMS['available_rate'])
-
-        available_rate_icu = st.sidebar.number_input(
-                'Proporção de leitos de UTI disponíveis',
-                step=.1,
-                min_value=.0,
-                max_value=1.,
-                value=DEFAULT_PARAMS['available_rate_icu'])
+        
     else:
         confirm_admin_rate = confirm_admin_rate*100
         los_covid = DEFAULT_PARAMS['length_of_stay_covid']
@@ -170,10 +179,6 @@ def make_param_widgets_hospital_queue(location, w_granularity, defaults=DEFAULT_
         icu_queue_death_rate = DEFAULT_PARAMS['icu_queue_death_rate']
         queue_death_rate = DEFAULT_PARAMS['queue_death_rate']
         icu_after_bed = DEFAULT_PARAMS['icu_rate_after_bed']
-        total_beds = int(qtd_beds)
-        total_beds_icu = int(qtd_beds_uci)
-        available_rate = DEFAULT_PARAMS['available_rate']
-        available_rate_icu = DEFAULT_PARAMS['available_rate_icu']
 
     return {"confirm_admin_rate": confirm_admin_rate,
             "los_covid": los_covid,
