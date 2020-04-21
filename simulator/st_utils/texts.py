@@ -22,7 +22,6 @@ MODEL_INTRO='''
 # Modelo SEIR-Bayes
 O gráfico abaixo mostra o resultado da simulação da evolução de pacientes infectados para os parâmetros escolhidos no menu da barra à esquerda. Mais informações sobre este modelo [aqui](https://github.com/andrelnunes/COVID-19#seir-bayes).
 
-### Previsão de infectados
 **(!) Importante**: Os resultados apresentados são *preliminares* e estão em fase de validação.
 '''
 
@@ -60,12 +59,13 @@ Também podem ser ajustados limites superior e inferior dos parâmetros *Períod
 '''
 
 SEIR_SIMULATION_SOURCE_EXPLAIN= '''
----
-A Previsão de Infectados necessita do **Número de Básico de Reprodução**, que é calculado com base nos dias mais recentes.
 
-Caso queira ver a evolução do Número Básico de Reprodução ao longo do tempo, habilite-o no menu à esquerda.
+### Número de reprodução
 
-Caso queira utilizar valores personalizados para este parâmetro, ative a caixa de confirmação abaixo.
+A Previsão de Infectados necessita do **Número de Básico de Reprodução**, que é calculado com base nos dias mais recentes. Caso queira ver a evolução do Número Básico de Reprodução ao longo do tempo, habilite-o no menu à esquerda.
+
+Para utilizar valores personalizados de reprodução, ative a caixa de confirmação abaixo.
+
 '''
 
 QUEUE_SIMULATION_SOURCE_EXPLAIN= '''
@@ -101,8 +101,8 @@ HOSPITAL_BREAKDOWN_DESCRIPTION= '''
 Os colapsos foram estimados para três cenários executados com base nos resultados do SEIR:
 
 - **Cenário Otimista**: utilizando o valor médio de novos infectados menos o desvio padrão das execuções do modelo SEIR.
-- **Cenário **Médio**: utilizando o valor médio de novos infectados das execuções do modelo SEIR.
-- **Cenário **Pessimista**: utilizando o valor médio de novos infectados mais o desvio padrão das execuções do modelo SEIR.
+- **Cenário Médio**: utilizando o valor médio de novos infectados das execuções do modelo SEIR.
+- **Cenário Pessimista**: utilizando o valor médio de novos infectados mais o desvio padrão das execuções do modelo SEIR.
 
 '''
 
@@ -121,9 +121,8 @@ r0_WARNING = '''
 **(!) Importante**: A estimação é sensível à qualidade das notificações dos casos positivos.
 '''
 
-
+def r0_ESTIMATION(place, date): return f'''
 O valor do número de reprodução básico $R_{0}$ está sendo estimado com os dados históricos de {place} com dados de {date}.
-
 '''
 
 SEIRBAYES_DESC = '''

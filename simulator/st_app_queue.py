@@ -304,9 +304,11 @@ def build_queue_simulator(w_date,
                           w_location_granulariy,
                           seir_output,
                           reported_rate):
-    st.markdown(texts.QUEUE_SIMULATION_SOURCE_EXPLAIN)
-    st.markdown(texts.HOSPITAL_QUEUE_SIMULATION)
     
+    st.markdown(texts.HOSPITAL_QUEUE_SIMULATION)
+    st.markdown(texts.QUEUE_SIMULATION_SOURCE_EXPLAIN)
+    st.markdown("---")
+
     _, model_output, sample_size, t_max = seir_output
     params_simulation = make_param_widgets_hospital_queue(w_location, w_location_granulariy)
 

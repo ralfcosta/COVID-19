@@ -332,9 +332,13 @@ def build_seir(w_date,
     sample_size = w_params.pop('sample_size')
     r0_dist = r0_samples[:, -1] 
     
+    st.markdown(texts.MODEL_INTRO)
+    st.markdown("---")
     st.markdown(texts.SEIR_SIMULATION_SOURCE_EXPLAIN)
-    r0_personaliz = st.checkbox('Utilizar Número Básico de Reprodução personalizado',value=False)
-    if r0_personaliz:
+    r0_personalized = st.checkbox('Utilizar Número Básico de Reprodução personalizado',value=False)
+    st.markdown("---")
+
+    if r0_personalized:
         r0_values = st.slider('Defina o intervalo para o Número Básico de Reprodução',min_value=0.0,max_value=10.0,value=(2.0,3.0),step=0.01)
         r0_dist = r0_values[0], r0_values[1], .95, 'lognorm'
 
@@ -354,7 +358,6 @@ def build_seir(w_date,
 
     with st.spinner("Criando visualização SEIR..."):
         ei_df = make_EI_df(model_output, sample_size, w_params['t_max'], w_date)
-        st.markdown(texts.MODEL_INTRO)
         st.write(texts.SEIRBAYES_DESC)
         w_scale = st.selectbox('Escala do eixo Y',
                             ['log', 'linear'],
