@@ -8,7 +8,7 @@ from datetime import timedelta
 
 from covid19 import data
 from covid19.utils import get_data_dir
-from st_utils.viz import make_simulation_chart
+from st_utils.viz import make_simulation_chart, make_simulation_chart_ocup_rate
 from st_utils import texts  
 from hospital_queue.queue_simulation import run_queue_simulation
 
@@ -64,7 +64,7 @@ def make_param_widgets_hospital_queue(location, w_granularity, defaults=DEFAULT_
 
         return beds_data_filtered['qtd_leitos'], beds_data_filtered['qtd_uti']
 
-    confirm_admin_rate = DEFAULT_PARAMS['confirm_admin_rate']*100
+    confirm_admin_rate = DEFAULT_PARAMS['confirm_admin_rate']
 
     if w_granularity == 'state':
         uf = location
@@ -304,7 +304,7 @@ def build_queue_simulator(w_date,
                           w_location_granulariy,
                           seir_output,
                           reported_rate):
-
+    st.markdown(texts.QUEUE_SIMULATION_SOURCE_EXPLAIN)
     st.markdown(texts.HOSPITAL_QUEUE_SIMULATION)
     
     _, model_output, sample_size, t_max = seir_output
@@ -356,10 +356,14 @@ def build_queue_simulator(w_date,
             .assign(description=description)) 
             for _, description, simulation_output in simulation_outputs])
         
-    st.altair_chart(make_simulation_chart(plot_output, "Occupied_beds", "Ocupação de leitos comuns",params_simulation["available_rate"],params_simulation["available_rate_icu"]))
-    st.altair_chart(make_simulation_chart(plot_output, "ICU_Occupied_beds", "Ocupação de leitos de UTI",params_simulation["available_rate"],params_simulation["available_rate_icu"]))
-    st.altair_chart(make_simulation_chart(plot_output, "Queue", "Fila de pacientes",params_simulation["available_rate"],params_simulation["available_rate_icu"]))
-    st.altair_chart(make_simulation_chart(plot_output, "ICU_Queue", "Fila de pacientes UTI",params_simulation["available_rate"],params_simulation["available_rate_icu"]))
+    st.altair_chart(make_simulation_chart(plot_output, "Occupied_beds", "Leitos Comuns Ocupados COVID"))
+    st.altair_chart(make_simulation_chart(plot_output, "ICU_Occupied_beds", "Leitos UTI Ocupados COVID"))
+
+    st.altair_chart(make_simulation_chart_ocup_rate(plot_output, "Occupied_beds", "Taxa de ocupação de leitos comuns (%)",params_simulation["available_rate"],params_simulation["available_rate_icu"]))
+    st.altair_chart(make_simulation_chart_ocup_rate(plot_output, "ICU_Occupied_beds", "Taxa de ocupação de leitos UTI (%)",params_simulation["available_rate"],params_simulation["available_rate_icu"]))
+
+    st.altair_chart(make_simulation_chart(plot_output, "Queue", "Fila de pacientes"))
+    st.altair_chart(make_simulation_chart(plot_output, "ICU_Queue", "Fila de pacientes UTI"))
 
     href = make_download_simulation_df(plot_output, 'queue-simulator.3778.care.csv')
     st.markdown(href, unsafe_allow_html=True)

@@ -331,6 +331,12 @@ def build_seir(w_date,
     w_params = make_param_widgets(NEIR0, reported_rate)
     sample_size = w_params.pop('sample_size')
     r0_dist = r0_samples[:, -1] 
+    
+    st.markdown(texts.SEIR_SIMULATION_SOURCE_EXPLAIN)
+    r0_personaliz = st.checkbox('Utilizar Número Básico de Reprodução personalizado',value=False)
+    if r0_personaliz:
+        r0_values = st.slider('Defina o intervalo para o Número Básico de Reprodução',min_value=0.0,max_value=10.0,value=(2.0,3.0),step=0.01)
+        r0_dist = r0_values[0], r0_values[1], .95, 'lognorm'
 
     with st.spinner("Calculando SEIR..."):
         model_info, _, _ = run_seir(w_date,
