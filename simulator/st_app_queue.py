@@ -312,60 +312,61 @@ def build_queue_simulator(w_date,
     _, model_output, sample_size, t_max = seir_output
     params_simulation = make_param_widgets_hospital_queue(w_location, w_location_granulariy)
 
-    simulation_outputs, cut_after = run_queue_model(model_output,
-                                                    sample_size,
-                                                    t_max,
-                                                    reported_rate,
-                                                    cases_df,
-                                                    w_location,
-                                                    w_date,
-                                                    params_simulation)
-    
-    st.markdown(texts.HOSPITAL_BREAKDOWN_DESCRIPTION)
-
-    def get_breakdown(description, simulation_output):
-
-        simulation_output = simulation_output.assign(is_breakdown=simulation_output["Queue"] >= 1,
-                                                     is_breakdown_icu=simulation_output["ICU_Queue"] >= 1)
-
-        def get_breakdown_start(column):
-
-            breakdown_days = simulation_output[simulation_output[column]]
-
-            if (breakdown_days.size >= 1):
-                breakdown_date = breakdown_days.Data.iloc[0].strftime("%d/%m/%Y")
-                return breakdown_date
-            else:
-                return "N/A"
+    if st.button("Executar sumulação"):
+        simulation_outputs, cut_after = run_queue_model(model_output,
+                                                        sample_size,
+                                                        t_max,
+                                                        reported_rate,
+                                                        cases_df,
+                                                        w_location,
+                                                        w_date,
+                                                        params_simulation)
         
-        return (description,
-                get_breakdown_start('is_breakdown'), 
-                get_breakdown_start('is_breakdown_icu'))
+        st.markdown(texts.HOSPITAL_BREAKDOWN_DESCRIPTION)
 
-    st.markdown((
-        pd.DataFrame(
-            data=[get_breakdown(description, simulation_output) for _, description, simulation_output in simulation_outputs],
-            columns=['Cenário', 'Leitos comuns', 'Leitos UTI'])
-        .set_index('Cenário')
-        .to_markdown()))
+        def get_breakdown(description, simulation_output):
 
-    st.markdown("*N/A*: não houve formação de filas por falta de leitos")
-    st.markdown("### Visualizações")
+            simulation_output = simulation_output.assign(is_breakdown=simulation_output["Queue"] >= 1,
+                                                        is_breakdown_icu=simulation_output["ICU_Queue"] >= 1)
 
-    plot_output = pd.concat(
-        [(simulation_output
-            .drop(simulation_output.index[:cut_after])
-            .assign(description=description)) 
-            for _, description, simulation_output in simulation_outputs])
-        
-    st.altair_chart(make_simulation_chart(plot_output, "Occupied_beds", "Leitos Comuns Ocupados COVID"))
-    st.altair_chart(make_simulation_chart(plot_output, "ICU_Occupied_beds", "Leitos UTI Ocupados COVID"))
+            def get_breakdown_start(column):
 
-    st.altair_chart(make_simulation_chart_ocup_rate(plot_output, "Occupied_beds", "Taxa de ocupação de leitos comuns (%)",params_simulation["available_rate"],params_simulation["available_rate_icu"]))
-    st.altair_chart(make_simulation_chart_ocup_rate(plot_output, "ICU_Occupied_beds", "Taxa de ocupação de leitos UTI (%)",params_simulation["available_rate"],params_simulation["available_rate_icu"]))
+                breakdown_days = simulation_output[simulation_output[column]]
 
-    st.altair_chart(make_simulation_chart(plot_output, "Queue", "Fila de pacientes"))
-    st.altair_chart(make_simulation_chart(plot_output, "ICU_Queue", "Fila de pacientes UTI"))
+                if (breakdown_days.size >= 1):
+                    breakdown_date = breakdown_days.Data.iloc[0].strftime("%d/%m/%Y")
+                    return breakdown_date
+                else:
+                    return "N/A"
+            
+            return (description,
+                    get_breakdown_start('is_breakdown'), 
+                    get_breakdown_start('is_breakdown_icu'))
 
-    href = make_download_simulation_df(plot_output, 'queue-simulator.3778.care.csv')
-    st.markdown(href, unsafe_allow_html=True)
+        st.markdown((
+            pd.DataFrame(
+                data=[get_breakdown(description, simulation_output) for _, description, simulation_output in simulation_outputs],
+                columns=['Cenário', 'Leitos comuns', 'Leitos UTI'])
+            .set_index('Cenário')
+            .to_markdown()))
+
+        st.markdown("*N/A*: não houve formação de filas por falta de leitos")
+        st.markdown("### Visualizações")
+
+        plot_output = pd.concat(
+            [(simulation_output
+                .drop(simulation_output.index[:cut_after])
+                .assign(description=description)) 
+                for _, description, simulation_output in simulation_outputs])
+            
+        st.altair_chart(make_simulation_chart(plot_output, "Occupied_beds", "Leitos Comuns Ocupados COVID"))
+        st.altair_chart(make_simulation_chart(plot_output, "ICU_Occupied_beds", "Leitos UTI Ocupados COVID"))
+
+        st.altair_chart(make_simulation_chart_ocup_rate(plot_output, "Occupied_beds", "Taxa de ocupação de leitos comuns (%)",params_simulation["available_rate"],params_simulation["available_rate_icu"]))
+        st.altair_chart(make_simulation_chart_ocup_rate(plot_output, "ICU_Occupied_beds", "Taxa de ocupação de leitos UTI (%)",params_simulation["available_rate"],params_simulation["available_rate_icu"]))
+
+        st.altair_chart(make_simulation_chart(plot_output, "Queue", "Fila de pacientes"))
+        st.altair_chart(make_simulation_chart(plot_output, "ICU_Queue", "Fila de pacientes UTI"))
+
+        href = make_download_simulation_df(plot_output, 'queue-simulator.3778.care.csv')
+        st.markdown(href, unsafe_allow_html=True)
