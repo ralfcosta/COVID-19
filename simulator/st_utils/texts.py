@@ -107,7 +107,7 @@ Os colapsos foram estimados para três cenários executados com base nos resulta
 
 - **Cenário Otimista**: utilizando o valor médio de novos infectados menos o desvio padrão das execuções do modelo SEIR.
 - **Cenário Médio**: utilizando o valor médio de novos infectados das execuções do modelo SEIR.
-- **Cenário Pessimista**: utilizando o valor médio de novos infectados mais o desvio padrão das execuções do modelo SEIR.
+- **Cenário Pessimista**(consideração recomendada): utilizando o valor médio de novos infectados mais o desvio padrão das execuções do modelo SEIR.
 
 '''
 

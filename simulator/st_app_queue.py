@@ -312,7 +312,7 @@ def build_queue_simulator(w_date,
     _, model_output, sample_size, t_max = seir_output
     params_simulation = make_param_widgets_hospital_queue(w_location, w_location_granulariy)
 
-    if st.button("Executar sumulação"):
+    if st.button("Executar simulação"):
         simulation_outputs, cut_after = run_queue_model(model_output,
                                                         sample_size,
                                                         t_max,
