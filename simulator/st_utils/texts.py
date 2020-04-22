@@ -2,12 +2,15 @@ INTRODUCTION = '''
 # COVID-19-BR
 O objetivo deste projeto é iniciar uma força tarefa conjunta da comunidade científica e tecnológica a fim de criar modelos de previsão de infectados (e talvez outras métricas) pelo COVID-19, focando no Brasil. O projeto é público e pode ser usado por todos.
 
-No menu da barra à esquerda, selecione as projeções que deseja visualizar e altere os parâmetros para simular diferentes cenários.
+**Como começar:** no menu da barra à esquerda, selecione as projeções que deseja visualizar e altere os parâmetros para simular diferentes cenários.
 
 #### Para dúvidas e contribuições, entre em contato por [email](mailto:covid19br.site@gmail.com?subject=[Dúvidas%20e%20Contribuições]%20Modelos%20COVID19).
 ---
 '''
+NOTA_TECNICA = '''
+**Nota Técnica:** Entenda os modelos matemáticos utilizados para as simulações [aqui](https://drive.google.com/file/d/1wMqx9NB-xnD77GM64pfTCZ2kXvs9_7mH/view).
 
+'''
 # INTRODUCTION = '''
 # No menu da barra à esquerda, selecione as projeções que deseja visualizar e altere os parâmetros para simular diferentes cenários.
 # '''
@@ -121,6 +124,7 @@ r0_WARNING = '''
 **(!) Importante**: A estimação é sensível à qualidade das notificações dos casos positivos.
 '''
 
+def r0_ESTIMATION(place, date): return  f'''
 
 O valor do número de reprodução básico $R_{0}$ está sendo estimado com os dados históricos de {place} com dados de {date}.
 

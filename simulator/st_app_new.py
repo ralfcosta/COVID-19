@@ -106,6 +106,7 @@ if __name__ == '__main__':
 
     my_placeholder = st.empty()
     my_placeholder.markdown(texts.INTRODUCTION)
+    st.markdown(texts.NOTA_TECNICA)
 
     base_parameters = create_basic_sidebar()
 
