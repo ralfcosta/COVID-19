@@ -34,7 +34,7 @@ def plot_EI(model_output, scale, start_date):
                                scale=scale, 
                                show_uncertainty=True)
 
-@st.cache
+@st.cache(show_spinner=False, suppress_st_warning=True)
 def make_EI_df(model_output, sample_size, t_max, date):
     _, E, I, R, t = model_output
     size = sample_size*t_max
@@ -276,7 +276,7 @@ def make_param_widgets(NEIR0, reported_rate, r0_samples=None, defaults=DEFAULT_P
             'sample_size': sample_size,
             'NEIR0': (N, EIR0)}
 
-@st.cache
+@st.cache(show_spinner=False, suppress_st_warning=True)
 def run_seir(w_date,
              w_location,
              cases_df,
@@ -289,27 +289,30 @@ def run_seir(w_date,
              NEIR0 = None):
 
     if reported_rate is None:
-        reported_rate, cCFR = estimate_subnotification(cases_df,
-                                                       w_location,
-                                                       w_date,
-                                                       w_location_granulariy)
-        reported_rate = reported_rate*100
-        w_params['fator_subr'] = reported_rate
+        calc_reported_rate, cCFR = estimate_subnotification(cases_df,
+                                                            w_location,
+                                                            w_date,
+                                                            w_location_granulariy)
+        new_reported_rate = calc_reported_rate*100
+    else:
+        new_reported_rate = reported_rate
 
     if NEIR0 is None:
-        NEIR0 = make_NEIR0(cases_df, population_df, w_location, w_date, reported_rate)
+        new_NEIR0 = make_NEIR0(cases_df, population_df, w_location, w_date, reported_rate)
+    else:
+        new_NEIR0 = NEIR0
 
     w_params['r0_dist'] = r0_dist
-    model = SEIRBayes(NEIR0,
-                      w_params['r0_dist'],
-                      w_params['gamma_inv_dist'],
-                      w_params['alpha_inv_dist'],
-                      w_params['fator_subr'],
-                      w_params['t_max'])
+    model = SEIRBayes(new_NEIR0,
+                    w_params['r0_dist'],
+                    w_params['gamma_inv_dist'],
+                    w_params['alpha_inv_dist'],
+                    new_reported_rate,
+                    w_params['t_max'])
 
     model_output = model.sample(sample_size)
 
-    return (model, model_output, sample_size, w_params['t_max']), reported_rate, NEIR0
+    return (model, model_output, sample_size, w_params['t_max']), new_reported_rate, new_NEIR0
 
 def build_seir(w_date,
                w_location,
@@ -329,33 +332,38 @@ def build_seir(w_date,
     sample_size = w_params.pop('sample_size')
     r0_dist = r0_samples[:, -1] 
     
+    st.markdown(texts.MODEL_INTRO)
+    st.markdown("---")
     st.markdown(texts.SEIR_SIMULATION_SOURCE_EXPLAIN)
-    r0_personaliz = st.checkbox('Utilizar Número Básico de Reprodução personalizado',value=False)
-    if r0_personaliz:
+    r0_personalized = st.checkbox('Utilizar Número Básico de Reprodução personalizado',value=False)
+    st.markdown("---")
+
+    if r0_personalized:
         r0_values = st.slider('Defina o intervalo para o Número Básico de Reprodução',min_value=0.0,max_value=10.0,value=(2.0,3.0),step=0.01)
         r0_dist = r0_values[0], r0_values[1], .95, 'lognorm'
 
-    model_info, _, _ = run_seir(w_date,
-                                w_location,
-                                cases_df,
-                                population_df,
-                                w_location_granulariy,
-                                r0_dist,
-                                w_params = w_params,
-                                sample_size = sample_size,
-                                reported_rate = w_params['fator_subr'],
-                                NEIR0=NEIR0)
+    with st.spinner("Calculando SEIR..."):
+        model_info, _, _ = run_seir(w_date,
+                                    w_location,
+                                    cases_df,
+                                    population_df,
+                                    w_location_granulariy,
+                                    r0_dist,
+                                    w_params = w_params,
+                                    sample_size = sample_size,
+                                    reported_rate = w_params['fator_subr'],
+                                    NEIR0=NEIR0)
 
     model, model_output, _ , _ = model_info
-    
-    ei_df = make_EI_df(model_output, sample_size, w_params['t_max'], w_date)
-    st.markdown(texts.MODEL_INTRO)
-    st.write(texts.SEIRBAYES_DESC)
-    w_scale = st.selectbox('Escala do eixo Y',
-                           ['log', 'linear'],
-                           index=1)
-    fig = plot_EI(model_output, w_scale,w_date)
-    st.altair_chart(fig)
+
+    with st.spinner("Criando visualização SEIR..."):
+        ei_df = make_EI_df(model_output, sample_size, w_params['t_max'], w_date)
+        st.write(texts.SEIRBAYES_DESC)
+        w_scale = st.selectbox('Escala do eixo Y',
+                            ['log', 'linear'],
+                            index=1)
+        fig = plot_EI(model_output, w_scale,w_date)
+        st.altair_chart(fig)
 
     download_placeholder = st.empty()
 
@@ -365,8 +373,8 @@ def build_seir(w_date,
         download_placeholder.empty()
 
     dists = [w_params['alpha_inv_dist'],
-             w_params['gamma_inv_dist'],
-             r0_dist]
+            w_params['gamma_inv_dist'],
+            r0_dist]
 
     SEIR0 = model._params['init_conditions']
     st.markdown(texts.make_SIMULATION_PARAMS(SEIR0, dists, True))

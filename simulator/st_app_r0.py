@@ -36,7 +36,7 @@ def load_incidence(cases_df):
             .sum(axis=1)
             .unstack(level=1))
 
-@st.cache
+@st.cache(show_spinner=False)
 def estimate_r0(w_date,
                 w_location,
                 cases_df):

@@ -25,7 +25,7 @@ def create_basic_sidebar():
         return (datetime
                     .strptime(date, "%Y-%m-%d")
                     .strftime("%d/%m/%Y"))
-    @st.cache
+    @st.cache(show_spinner=False)
     def make_place_options(cases_df, population_df):
         return (cases_df
                 .swaplevel(0,1, axis=1)
@@ -35,7 +35,7 @@ def create_basic_sidebar():
                 .pipe(lambda s: s[s & s.index.isin(population_df.index)])
                 .index)
 
-    @st.cache
+    @st.cache(show_spinner=False)
     def make_date_options(cases_df, place):
         return (cases_df
                 [place]

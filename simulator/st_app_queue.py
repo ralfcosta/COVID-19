@@ -195,7 +195,7 @@ def make_param_widgets_hospital_queue(location, w_granularity, defaults=DEFAULT_
             "available_rate": available_rate,
             "available_rate_icu": available_rate_icu}
 
-@st.cache(suppress_st_warning=True)
+@st.cache(show_spinner=False)
 def calculate_input_hospital_queue(model_output, sample_size, t_max, cases_df, place, date):
     S, E, I, R, t = model_output
     
@@ -247,7 +247,7 @@ def calculate_input_hospital_queue(model_output, sample_size, t_max, cases_df, p
 
 def run_queue_simulation_cached(dataset, cut_after, params_simulation, reported_rate, w_place):
 
-    @st.cache(suppress_st_warning=True)
+    @st.cache(show_spinner=False, suppress_st_warning=True)
     def run_simulation(dataset, execution_columnm, execution_description):
         df = dataset.copy()
         df = df.assign(hospitalizados=0)
@@ -304,9 +304,11 @@ def build_queue_simulator(w_date,
                           w_location_granulariy,
                           seir_output,
                           reported_rate):
-    st.markdown(texts.QUEUE_SIMULATION_SOURCE_EXPLAIN)
-    st.markdown(texts.HOSPITAL_QUEUE_SIMULATION)
     
+    st.markdown(texts.HOSPITAL_QUEUE_SIMULATION)
+    st.markdown(texts.QUEUE_SIMULATION_SOURCE_EXPLAIN)
+    st.markdown("---")
+
     _, model_output, sample_size, t_max = seir_output
     params_simulation = make_param_widgets_hospital_queue(w_location, w_location_granulariy)
 
