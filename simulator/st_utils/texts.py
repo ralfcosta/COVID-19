@@ -79,14 +79,16 @@ HOSPITAL_QUEUE_SIMULATION= '''
 
 # Simulação de fila hospitalar
 
-A simulação do modelo de fila, pode levar alguns minutos.
-
 **(!) Importante**: Os resultados apresentados são preliminares e estão em fase de validação.
 
 São definidas as condições listadas no menu à esquera para o dia 0.
 Unidade, data e demais parâmetros podem ser ajustados conforme desejado.
 O sistema é considerado colapsado quando há formação de filas, consequente da lotação dos leitos.
 
+'''
+
+HOSPITAL_QUEUE_EXECUTION = '''
+A simulação do modelo de fila, pode levar alguns minutos. Deseja executa-la nesse momento?
 '''
 
 HOSPITAL_QUEUE_INFO= '''
