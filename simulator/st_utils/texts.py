@@ -1,11 +1,19 @@
 INTRODUCTION = '''
-# COVID-19
+# COLETIVO COVID-19-BR
 O objetivo deste projeto é iniciar uma força tarefa conjunta da comunidade científica e tecnológica a fim de criar modelos de previsão de infectados (e talvez outras métricas) pelo COVID-19, focando no Brasil. O projeto é público e pode ser usado por todos.
 
-#### Para dúvidas e contribuições, entre em contato por [email](mailto:contato.covidmodels@gmail.com?subject=[Dúvidas%20e%20Contribuições]%20Modelos%20COVID19).
+**Como começar:** no menu da barra à esquerda, selecione as projeções que deseja visualizar e altere os parâmetros para simular diferentes cenários.
 
+#### Para dúvidas e contribuições, entre em contato por [email](mailto:covid19br.site@gmail.com?subject=[Dúvidas%20e%20Contribuições]%20Modelos%20COVID19).
 ---
 '''
+NOTA_TECNICA = '''
+**Nota Técnica:** Entenda os modelos matemáticos utilizados para as simulações [aqui](https://drive.google.com/file/d/1wMqx9NB-xnD77GM64pfTCZ2kXvs9_7mH/view).
+
+'''
+# INTRODUCTION = '''
+# No menu da barra à esquerda, selecione as projeções que deseja visualizar e altere os parâmetros para simular diferentes cenários.
+# '''
 
 PARAMETER_SELECTION='''
 # Seleção de parâmetros
@@ -14,10 +22,9 @@ Para simular outros cenários, altere um parâmetro e tecle **Enter**. O novo re
 '''
 
 MODEL_INTRO='''
-## Modelo SEIR-Bayes
-O gráfico abaixo mostra o resultado da simulação da evolução de pacientes infectados para os parâmetros escolhidos no menu da barra à esquerda. Mais informações sobre este modelo [aqui](https://github.com/3778/COVID-19#seir-bayes).
+# Modelo SEIR-Bayes
+O gráfico abaixo mostra o resultado da simulação da evolução de pacientes infectados para os parâmetros escolhidos no menu da barra à esquerda. Mais informações sobre este modelo [aqui](https://github.com/andrelnunes/COVID-19#seir-bayes).
 
-### Previsão de infectados
 **(!) Importante**: Os resultados apresentados são *preliminares* e estão em fase de validação.
 '''
 
@@ -54,14 +61,37 @@ Baseado na seleção anterior, é possível selecionar uma unidade da federaçã
 Também podem ser ajustados limites superior e inferior dos parâmetros *Período infeccioso*, *Tempo de incubação* e *Número básico de reprodução*. Estes limites definem um intervalo de confiança de 95% de uma distribuição log-normal para cada parâmetro.\n\n\n
 '''
 
+SEIR_SIMULATION_SOURCE_EXPLAIN= '''
+
+### Número de reprodução
+
+A Previsão de Infectados necessita do **Número de Básico de Reprodução**, que é calculado com base nos dias mais recentes. Caso queira ver a evolução do Número Básico de Reprodução ao longo do tempo, habilite-o no menu à esquerda.
+
+Para utilizar valores personalizados de reprodução, ative a caixa de confirmação abaixo.
+
+'''
+
+QUEUE_SIMULATION_SOURCE_EXPLAIN= '''
+---
+A Simulação de Fila Hospitalar é feita com base da **Previsão de Infectados**.
+
+Caso queira alterar essa simulação, habilite-a no menu da barra à esquerda.
+'''
 
 HOSPITAL_QUEUE_SIMULATION= '''
----
 
-## Simulação de fila hospitalar
+# Simulação de fila hospitalar
 
-A simulação do modelo de fila, pode levar alguns minutos.
+**(!) Importante**: Os resultados apresentados são preliminares e estão em fase de validação.
 
+São definidas as condições listadas no menu à esquera para o dia 0.
+Unidade, data e demais parâmetros podem ser ajustados conforme desejado.
+O sistema é considerado colapsado quando há formação de filas, consequente da lotação dos leitos.
+
+'''
+
+HOSPITAL_QUEUE_EXECUTION = '''
+A simulação do modelo de fila, pode levar alguns minutos. Deseja executa-la nesse momento?
 '''
 
 HOSPITAL_QUEUE_INFO= '''
@@ -70,29 +100,19 @@ HOSPITAL_QUEUE_INFO= '''
 Os resultados abaixo apresentam a evolução do sistema de saúde do município de acordo com uma simulação simplificada fundamentada em teoria de filas. Mais informações sobre esse modelo [aqui] (https://github.com/andrelnunes/COVID-19).
 '''
 
-HOSPITAL_GRAPH_DESCRIPTION= '''
-### Previsão de Colapso:
-
-**(!) Importante**: Os resultados apresentados são preliminares e estão em fase de validação.
-
-São definidas as condições listadas no menu à esquera para o dia 0.
-Unidade, data e demais parâmetros podem ser ajustados conforme desejado.
-O sistema é considerado colapsado quando há formação de filas, consequente da lotação dos leitos.
-'''
-
 HOSPITAL_BREAKDOWN_DESCRIPTION= '''
 ### Previsão de Colapso:
 
 Os colapsos foram estimados para três cenários executados com base nos resultados do SEIR:
 
-- Cenário *Otimista*: utilizando o valor médio de novos infectados menos o desvio padrão das execuções do modelo SEIR.
-- Cenário *Médio*: utilizando o valor médio de novos infectados das execuções do modelo SEIR.
-- Cenário *Pessimista*: utilizando o valor médio de novos infectados mais o desvio padrão das execuções do modelo SEIR.
+- **Cenário Otimista**: utilizando o valor médio de novos infectados menos o desvio padrão das execuções do modelo SEIR.
+- **Cenário Médio**: utilizando o valor médio de novos infectados das execuções do modelo SEIR.
+- **Cenário Pessimista**(consideração recomendada): utilizando o valor médio de novos infectados mais o desvio padrão das execuções do modelo SEIR.
 
 '''
 
 DATA_SOURCES = '''
----
+
 ### Fontes dos dados
 
 * Casos confirmados por município: [Número de casos confirmados de COVID-19 no Brasil](https://raw.githubusercontent.com/wcota/covid19br/master/cases-brazil-cities-time.csv) (de https://github.com/wcota/covid19br)
@@ -102,12 +122,13 @@ DATA_SOURCES = '''
 
 r0_ESTIMATION_TITLE = '## Número de reprodução básico $R_{{0}}$'
 
-def r0_ESTIMATION(place, date): return  f'''
-O valor do número de reprodução básico $R_{0}$ está sendo estimado com os dados históricos de {place}. Caso você queria especificar o valor manualmente, desabilite a opção acima e insira os valores desejados.
-
+r0_WARNING = '''
 **(!) Importante**: A estimação é sensível à qualidade das notificações dos casos positivos.
+'''
 
-O $R_{{0}}$ utilizado no modelo SEIR-Bayes é o do dia {date}, que é o mais recente.
+def r0_ESTIMATION(place, date): return  f'''
+
+O valor do número de reprodução básico $R_{0}$ está sendo estimado com os dados históricos de {place} com dados de {date}.
 '''
 
 SEIRBAYES_DESC = '''
@@ -119,11 +140,30 @@ Utilize o menu à esquerda para configurar o parâmetro.
 '''
 
 r0_CITATION = '''
-A metodologia utilizada para estimação foi baseada no artigo [*Thompson, R. N., et al. "Improved inference of time-varying reproduction numbers during infectious disease outbreaks." Epidemics 29 (2019): 100356.*](https://www.sciencedirect.com/science/article/pii/S1755436519300350). O código da implementação pode ser encontrado [aqui](https://github.com/3778/COVID-19/blob/master/covid19/estimation.py).
+A metodologia utilizada para estimação foi baseada no artigo [*Thompson, R. N., et al. "Improved inference of time-varying reproduction numbers during infectious disease outbreaks." Epidemics 29 (2019): 100356.*](https://www.sciencedirect.com/science/article/pii/S1755436519300350). O código da implementação pode ser encontrado [aqui](https://github.com/andrelnunes/COVID-19/blob/master/simulator/covid19/estimation.py).
 '''
 
 def r0_NOT_ENOUGH_DATA(w_place, w_date): return f'''
 **{w_place} não possui dados suficientes na data 
 {w_date} para fazer a estimação. Logo, foram
 utilizados os dados agregados Brasil**
+'''
+
+INTRODUCTION_SIDEBAR = '''
+# Projeções
+
+Selecione as projeções que deseja simular.
+
+'''
+
+R0_MODEL_DESC = "Número de reprodução básico"
+SEIR_MODEL_DESC = "Previsão de infectados (modelo SEIR-Bayes)"
+QUEUE_MODEL_DESC = "Simulação de fila hospitalar"
+
+BASE_PARAMETERS_DESCRIPTION = '''
+# Seleção de parâmetros
+
+Para outros cenários, alterer um parâmetro e tecle **Enter**. O novo resultado será calculado e apresentado automaticamente.
+
+---
 '''
